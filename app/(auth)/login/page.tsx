@@ -34,7 +34,7 @@ export default function LoginPage() {
         <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-2)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px' }}>
           Médiathèques · Strasbourg
         </div>
-        <h1 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--navy)', marginBottom: '24px', letterSpacing: '-0.4px' }}>
+        <h1 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--color-heading)', marginBottom: '24px', letterSpacing: '-0.4px' }}>
           {mode === 'login' ? 'Connexion' : 'Créer un compte'}
         </h1>
 

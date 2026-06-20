@@ -34,7 +34,7 @@ export default function NavBottom() {
             <span style={{
               fontSize: '9px',
               fontWeight: active ? 800 : 500,
-              color: active ? 'var(--navy)' : 'var(--text-2)',
+              color: active ? 'var(--color-heading)' : 'var(--text-2)',
               fontFamily: 'DM Sans, sans-serif',
               letterSpacing: '0.01em',
             }}>

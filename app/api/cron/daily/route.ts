@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-server'
-import { decrypt } from '@/lib/crypto'
+import { getIguanaCookiesForUser } from '@/lib/get-iguana-cookies'
 import { fetchBookings, fetchLoans, parseIguanaDate, getDaysUntil } from '@/lib/iguana'
 import { sendPush, type PushPayload } from '@/lib/push'
 
@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
   const sb = getSupabaseAdmin()
   const { data: sessions } = await sb
     .from('iguana_sessions')
-    .select('user_id, instance_ci_enc, instance_st_enc')
+    .select('user_id')
 
   if (!sessions?.length) return NextResponse.json({ processed: 0, notified: 0 })
 
@@ -20,10 +20,9 @@ export async function GET(req: NextRequest) {
 
   for (const session of sessions) {
     try {
-      const cookies = {
-        ci: decrypt(session.instance_ci_enc),
-        st: decrypt(session.instance_st_enc),
-      }
+      // Auto-refresh cookies if expired (credential mode) or use raw cookies (legacy)
+      const cookies = await getIguanaCookiesForUser(session.user_id)
+      if (!cookies) continue
 
       const [bookings, loans] = await Promise.all([
         fetchBookings(cookies),
@@ -71,7 +70,6 @@ export async function GET(req: NextRequest) {
             await sendPush(sub.endpoint, sub.p256dh, sub.auth_key, msg)
             notified++
           } catch (e: unknown) {
-            // Remove expired subscription
             if (typeof e === 'object' && e !== null && 'statusCode' in e && (e as { statusCode: number }).statusCode === 410) {
               await sb.from('push_subscriptions').delete().eq('endpoint', sub.endpoint)
             }

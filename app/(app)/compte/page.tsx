@@ -64,7 +64,7 @@ export default function ComptePage() {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '70vh', padding: '24px', gap: '16px', textAlign: 'center' }}>
         <div style={{ fontSize: '36px' }}>📚</div>
-        <h2 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--navy)', letterSpacing: '-0.3px' }}>
+        <h2 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--color-heading)', letterSpacing: '-0.3px' }}>
           Connecte ta médiathèque
         </h2>
         <p style={{ fontSize: '13px', color: 'var(--text-2)', maxWidth: '280px', lineHeight: 1.7 }}>
@@ -87,7 +87,7 @@ export default function ComptePage() {
         <div style={{ fontSize: '10px', fontWeight: 500, color: 'var(--text-2)', marginBottom: '2px' }}>
           {dateLabel}
         </div>
-        <div style={{ fontSize: '21px', fontWeight: 800, color: 'var(--navy)', letterSpacing: '-0.5px' }}>
+        <div style={{ fontSize: '21px', fontWeight: 800, color: 'var(--color-heading)', letterSpacing: '-0.5px' }}>
           Bonjour, {userName}
         </div>
         <div style={{ display: 'flex', gap: '6px', marginTop: '14px' }}>
@@ -102,7 +102,7 @@ export default function ComptePage() {
               border: 'none',
               cursor: 'pointer',
               fontFamily: 'DM Sans, sans-serif',
-              background: tab === t ? 'var(--navy)' : '#EDEEF0',
+              background: tab === t ? 'var(--navy)' : 'var(--tab-inactive-bg)',
               color: tab === t ? 'white' : 'var(--text-2)',
               transition: 'background 0.12s, color 0.12s',
             }}>
