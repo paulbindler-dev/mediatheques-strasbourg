@@ -39,7 +39,7 @@ export default function BookingCard({ b }: { b: IguanaBooking }) {
         alt=""
       />
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--navy)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', letterSpacing: '-0.2px' }}>
+        <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-heading)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', letterSpacing: '-0.2px' }}>
           {b.Title}
         </div>
         <div style={{ fontSize: '10px', color: 'var(--text-2)', marginTop: '2px' }}>

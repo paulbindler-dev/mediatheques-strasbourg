@@ -49,7 +49,7 @@ export default function NavSidebar() {
             <span style={{
               fontSize: '13px',
               fontWeight: active ? 700 : 400,
-              color: active ? 'var(--navy)' : 'var(--text-2)',
+              color: active ? 'var(--color-heading)' : 'var(--text-2)',
               fontFamily: 'DM Sans, sans-serif',
             }}>
               {tab.label}

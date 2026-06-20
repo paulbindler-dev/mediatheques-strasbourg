@@ -1,27 +1,39 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getSupabaseServer } from '@/lib/supabase-server'
+import { getSupabaseServer, getSupabaseAdmin } from '@/lib/supabase-server'
 import { encrypt } from '@/lib/crypto'
-import { fetchBookings } from '@/lib/iguana'
+import { loginAndGetCookies } from '@/lib/iguana-auth'
 
 export async function POST(req: NextRequest) {
   const sb = getSupabaseServer()
   const { data: { user } } = await sb.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
 
-  const { ci, st } = await req.json() as { ci: string; st: string }
-  if (!ci || !st) return NextResponse.json({ error: 'Valeurs manquantes' }, { status: 400 })
+  const body = await req.json() as { email?: string; password?: string }
+  const { email, password } = body
 
-  // Verify cookies work before saving
-  try {
-    await fetchBookings({ ci, st })
-  } catch {
-    return NextResponse.json({ error: 'Cookies invalides — vérifie les valeurs copiées' }, { status: 400 })
+  if (!email || !password) {
+    return NextResponse.json({ error: 'Email et mot de passe requis' }, { status: 400 })
   }
 
-  const { error } = await sb.from('iguana_sessions').upsert({
+  // Validate credentials by actually logging in
+  let ci: string, st: string
+  try {
+    const result = await loginAndGetCookies(email.trim(), password)
+    ci = result.ci
+    st = result.st
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Erreur de connexion MonStrasbourg'
+    return NextResponse.json({ error: msg }, { status: 400 })
+  }
+
+  const exp = new Date(Date.now() + 110 * 60 * 1000).toISOString()
+  const record = { mode: 'credentials', email: email.trim(), password, ci, st, exp }
+
+  const admin = getSupabaseAdmin()
+  const { error } = await admin.from('iguana_sessions').upsert({
     user_id: user.id,
-    instance_ci_enc: encrypt(ci),
-    instance_st_enc: encrypt(st),
+    instance_ci_enc: encrypt(JSON.stringify(record)),
+    instance_st_enc: encrypt('sentinel'),
     updated_at: new Date().toISOString(),
   }, { onConflict: 'user_id' })
 
