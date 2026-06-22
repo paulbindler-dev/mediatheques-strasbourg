@@ -737,15 +737,17 @@ function Section({ label, count, accent, children }: {
   label: string; count: number; accent: string; children: React.ReactNode
 }) {
   return (
-    <div style={{ marginBottom: '20px' }}>
+    <div style={{ marginBottom: '16px' }}>
       <div style={{
-        fontSize: '10px', fontWeight: 700, color: accent,
-        textTransform: 'uppercase', letterSpacing: '0.08em',
-        marginBottom: '8px', fontFamily: 'DM Mono, monospace',
+        fontSize: '10px', fontWeight: 700, color: 'var(--text-2)',
+        textTransform: 'uppercase', letterSpacing: '0.1em',
+        marginBottom: '6px', fontFamily: 'DM Mono, monospace', paddingLeft: '2px',
       }}>
-        {label} ({count})
+        {label} <span style={{ color: accent }}>· {count}</span>
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
+      <div className="group-items" style={{
+        background: 'var(--surface)', borderRadius: '12px', overflow: 'hidden',
+      }}>
         {children}
       </div>
     </div>
@@ -774,14 +776,8 @@ function ItemCard({
     : availabilityUnknown ? 'var(--border)'
     : isFound ? 'var(--green)'
     : 'var(--border)'
-  const borderColor = isAvailable ? 'var(--green-alpha)'
-    : isLoaned ? 'var(--orange-alpha)'
-    : 'var(--border)'
-
   return (
     <div style={{
-      background: 'var(--surface)', borderRadius: 'var(--radius-sm)',
-      border: `1px solid ${borderColor}`,
       padding: '11px 13px', display: 'flex', alignItems: 'flex-start', gap: '10px',
     }}>
       <div style={{

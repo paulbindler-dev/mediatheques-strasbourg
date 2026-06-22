@@ -24,6 +24,7 @@
   --overlay:       rgba(0, 0, 0, 0.5);
   --green-alpha:   rgba(34, 197, 94, 0.3);
   --orange-alpha:  rgba(249, 115, 22, 0.3);
+  --nav-bg:        rgba(255, 255, 255, 0.85);
 
   --radius:    16px;
   --radius-sm: 8px;
@@ -43,7 +44,12 @@
     --navy:        #1E4A8A;
     --error-bg:    rgba(239,68,68,0.12);
     --success-bg:  rgba(34,197,94,0.12);
+    --nav-bg:      rgba(22, 34, 50, 0.88);
   }
+}
+
+.group-items > *:not(:last-child) {
+  border-bottom: 0.5px solid var(--border);
 }
 
 * {
