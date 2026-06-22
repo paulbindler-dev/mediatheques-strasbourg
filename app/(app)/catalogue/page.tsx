@@ -453,7 +453,7 @@ export default function CataloguePage() {
       {/* Manage presets modal */}
       {showManagePresets && (
         <div style={{
-          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
+          position: 'fixed', inset: 0, background: 'var(--overlay)',
           display: 'flex', alignItems: 'flex-end', zIndex: 200,
         }} onClick={() => setShowManagePresets(false)}>
           <div
@@ -492,7 +492,7 @@ export default function CataloguePage() {
                   {p.custom ? (
                     <button
                       onClick={() => { setShowManagePresets(false); setDeleteConfirmId(p.id) }}
-                      style={{ width: '28px', height: '28px', borderRadius: '6px', background: 'var(--error-bg)', border: 'none', cursor: 'pointer', color: '#EF4444', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                      style={{ width: '28px', height: '28px', borderRadius: '6px', background: 'var(--error-bg)', border: 'none', cursor: 'pointer', color: 'var(--red)', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                       title="Supprimer"
                     >×</button>
                   ) : (
@@ -511,7 +511,7 @@ export default function CataloguePage() {
         if (!p) return null
         return (
           <div style={{
-            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
+            position: 'fixed', inset: 0, background: 'var(--overlay)',
             display: 'flex', alignItems: 'flex-end', zIndex: 200,
           }} onClick={() => setDeleteConfirmId(null)}>
             <div
@@ -537,7 +537,7 @@ export default function CataloguePage() {
                 <button
                   onClick={() => deleteCustomPreset(deleteConfirmId)}
                   style={{
-                    flex: 1, padding: '13px', background: '#EF4444', color: 'white',
+                    flex: 1, padding: '13px', background: 'var(--red)', color: 'white',
                     border: 'none', borderRadius: 'var(--radius-sm)',
                     fontSize: '14px', fontWeight: 700,
                     cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
@@ -554,7 +554,7 @@ export default function CataloguePage() {
       {/* Save preset modal */}
       {showSaveModal && (
         <div style={{
-          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
+          position: 'fixed', inset: 0, background: 'var(--overlay)',
           display: 'flex', alignItems: 'flex-end', zIndex: 200,
         }} onClick={() => setShowSaveModal(false)}>
           <div
@@ -709,7 +709,7 @@ function AddToListModal({ item, onAdd, onClose }: {
 
   return (
     <div style={{
-      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
+      position: 'fixed', inset: 0, background: 'var(--overlay)',
       display: 'flex', alignItems: 'flex-end', zIndex: 200,
     }} onClick={onClose}>
       <div

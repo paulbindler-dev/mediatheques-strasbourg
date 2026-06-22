@@ -454,7 +454,7 @@ export default function EnviesPage() {
                         </Section>
                       )}
                       {loaned.length > 0 && (
-                        <Section label="Actuellement emprunté" count={loaned.length} accent="#f97316">
+                        <Section label="Actuellement emprunté" count={loaned.length} accent="var(--orange)">
                           {loaned.map(item => (
                             <ItemCard key={item.id} item={item}
                               onRemove={id => mutate(s => removeItem(s, id))}
@@ -509,7 +509,7 @@ export default function EnviesPage() {
       {/* Manage lists modal */}
       {showManageModal && (
         <div style={{
-          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
+          position: 'fixed', inset: 0, background: 'var(--overlay)',
           display: 'flex', alignItems: 'flex-end', zIndex: 200,
         }} onClick={() => setShowManageModal(false)}>
           <div
@@ -589,7 +589,7 @@ export default function EnviesPage() {
                     style={{
                       width: '28px', height: '28px', borderRadius: '6px',
                       background: 'var(--error-bg)', border: 'none', cursor: 'pointer',
-                      color: '#EF4444', fontSize: '14px',
+                      color: 'var(--red)', fontSize: '14px',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}
                     title="Supprimer"
@@ -610,7 +610,7 @@ export default function EnviesPage() {
         const itemCount = store.items.filter(i => i.listId === deleteConfirmId).length
         return (
           <div style={{
-            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
+            position: 'fixed', inset: 0, background: 'var(--overlay)',
             display: 'flex', alignItems: 'flex-end', zIndex: 200,
           }} onClick={() => setDeleteConfirmId(null)}>
             <div
@@ -642,7 +642,7 @@ export default function EnviesPage() {
                 <button
                   onClick={() => handleDeleteList(deleteConfirmId)}
                   style={{
-                    flex: 1, padding: '13px', background: '#EF4444', color: 'white',
+                    flex: 1, padding: '13px', background: 'var(--red)', color: 'white',
                     border: 'none', borderRadius: 'var(--radius-sm)',
                     fontSize: '14px', fontWeight: 700,
                     cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
@@ -659,7 +659,7 @@ export default function EnviesPage() {
       {/* New list modal */}
       {showNewListModal && (
         <div style={{
-          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
+          position: 'fixed', inset: 0, background: 'var(--overlay)',
           display: 'flex', alignItems: 'flex-end', zIndex: 200,
         }} onClick={() => setShowNewListModal(false)}>
           <div
@@ -768,14 +768,14 @@ function ItemCard({
   const isAvailable = isFound && item.match?.available === true
   const availabilityUnknown = isFound && item.match?.available === undefined
   const dotColor = isAvailable ? 'var(--green)'
-    : isLoaned ? '#f97316'
+    : isLoaned ? 'var(--orange)'
     : isError ? 'var(--red)'
-    : isChecking ? '#f97316'
+    : isChecking ? 'var(--orange)'
     : availabilityUnknown ? 'var(--border)'
     : isFound ? 'var(--green)'
     : 'var(--border)'
-  const borderColor = isAvailable ? 'rgba(34,197,94,0.3)'
-    : isLoaned ? 'rgba(249,115,22,0.3)'
+  const borderColor = isAvailable ? 'var(--green-alpha)'
+    : isLoaned ? 'var(--orange-alpha)'
     : 'var(--border)'
 
   return (
@@ -798,10 +798,10 @@ function ItemCard({
         {isFound && item.match && (
           <div style={{ fontSize: '11px', color: 'var(--text-2)', display: 'flex', flexDirection: 'column', gap: '2px' }}>
             {item.foundAt && (
-              <span style={{ fontWeight: 600, color: isLoaned ? '#f97316' : 'var(--green)' }}>→ {item.foundAt}</span>
+              <span style={{ fontWeight: 600, color: isLoaned ? 'var(--orange)' : 'var(--green)' }}>→ {item.foundAt}</span>
             )}
             {isLoaned && (
-              <span style={{ color: '#f97316', fontWeight: 600 }}>
+              <span style={{ color: 'var(--orange)', fontWeight: 600 }}>
                 {item.match.dueDate ?? 'Emprunté'}
               </span>
             )}
@@ -842,7 +842,7 @@ function ItemCard({
         )}
 
         {item.checkedAt && !isChecking && (
-          <div style={{ fontSize: '10px', color: 'var(--text-2)', marginTop: '3px', fontFamily: 'DM Mono, monospace', opacity: 0.6 }}>
+          <div style={{ fontSize: '11px', color: 'var(--text-2)', marginTop: '3px', fontFamily: 'DM Mono, monospace' }}>
             vérifié {formatCheckedAt(item.checkedAt)}
           </div>
         )}
@@ -860,7 +860,7 @@ function ItemCard({
         )}
         <button
           onClick={() => onRemove(item.id)}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#EF4444', fontSize: '18px', padding: '2px 6px', lineHeight: 1, opacity: 0.7 }}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--red)', fontSize: '18px', padding: '2px 6px', lineHeight: 1, opacity: 0.7 }}
           title="Supprimer"
         >
           ×
