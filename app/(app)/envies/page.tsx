@@ -83,7 +83,6 @@ export default function EnviesPage() {
   const [newListIcon, setNewListIcon] = useState('⭐')
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
   const [showManageModal, setShowManageModal] = useState(false)
-  const [addTitleInput, setAddTitleInput] = useState('')
   const cloudSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const cloudDirty = useRef(false)
 
@@ -116,7 +115,7 @@ export default function EnviesPage() {
     if (cloudSaveTimer.current) clearTimeout(cloudSaveTimer.current)
     cloudSaveTimer.current = setTimeout(() => {
       saveToCloud(store).catch(() => {})
-    }, 1500)
+    }, 200)
     return () => {
       if (cloudSaveTimer.current) clearTimeout(cloudSaveTimer.current)
     }
@@ -181,18 +180,21 @@ export default function EnviesPage() {
       }
 
       if (match) {
-        try {
-          const hRes = await fetch(`/api/catalogue/holdings?rscId=${encodeURIComponent(match.rscId)}`)
-          const h = await hRes.json() as { available?: boolean | null; dueDate?: string | null; error?: string }
-          if (hRes.ok && h.available !== null && h.available !== undefined) {
-            match = { ...match, available: h.available, dueDate: h.dueDate ?? null }
-          } else {
-            // GetHoldings failed — preserve previously known availability (don't regress to "non vérifiée")
-            match = { ...match, available: item.match?.available, dueDate: item.match?.dueDate ?? null }
-          }
-        } catch {
-          match = { ...match, available: item.match?.available, dueDate: item.match?.dueDate ?? null }
+        let holdAvail: boolean | null | undefined = undefined
+        let holdDue: string | null = null
+        for (let attempt = 0; attempt < 2; attempt++) {
+          if (attempt > 0) await new Promise(r => setTimeout(r, 700))
+          try {
+            const hRes = await fetch(`/api/catalogue/holdings?rscId=${encodeURIComponent(match.rscId)}`)
+            const h = await hRes.json() as { available?: boolean | null; dueDate?: string | null }
+            if (hRes.ok && h.available !== null && h.available !== undefined) {
+              holdAvail = h.available; holdDue = h.dueDate ?? null; break
+            }
+          } catch { /* retry */ }
         }
+        match = holdAvail !== undefined
+          ? { ...match, available: holdAvail, dueDate: holdDue }
+          : { ...match, available: item.match?.available, dueDate: item.match?.dueDate ?? null }
       }
 
       const status: WishlistItem['status'] = match ? 'found' : 'not_found'
@@ -212,11 +214,11 @@ export default function EnviesPage() {
     setGlobalChecking(false)
   }
 
-  function handleAddTitle() {
-    const title = addTitleInput.trim()
+  function handleAddFromSearch() {
+    const title = searchFilter.trim()
     if (!title || !activeList) return
     mutate(s => addItem(s, activeList, title))
-    setAddTitleInput('')
+    setSearchFilter('')
   }
 
   function handleCreateList() {
@@ -293,7 +295,7 @@ export default function EnviesPage() {
             type="search"
             value={searchFilter}
             onChange={e => setSearchFilter(e.target.value)}
-            placeholder={`Rechercher dans ${currentList?.name ?? 'la liste'}…`}
+            placeholder={`Rechercher ou ajouter dans ${currentList?.name ?? 'la liste'}…`}
             style={{
               width: '100%', padding: '10px 36px',
               borderRadius: 'var(--radius-sm)',
@@ -368,49 +370,42 @@ export default function EnviesPage() {
       {/* Content */}
       <div style={{ padding: '14px 16px', flex: 1 }}>
 
-        {/* Add title input — always visible */}
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '14px' }}>
-          <input
-            type="text"
-            value={addTitleInput}
-            onChange={e => setAddTitleInput(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && handleAddTitle()}
-            placeholder={`Ajouter un titre à ${currentList?.name ?? 'la liste'}…`}
-            style={{
-              flex: 1, padding: '9px 13px',
-              borderRadius: 'var(--radius-sm)',
-              border: '1.5px solid var(--border)',
-              fontSize: '13px',
-              background: 'var(--bg)', color: 'var(--text)',
-              fontFamily: 'DM Sans, sans-serif', outline: 'none',
-            }}
-          />
-          <button
-            onClick={handleAddTitle}
-            disabled={!addTitleInput.trim()}
-            style={{
-              padding: '9px 14px', background: addTitleInput.trim() ? 'var(--navy)' : 'var(--tab-inactive-bg)',
-              color: addTitleInput.trim() ? 'white' : 'var(--text-2)',
-              border: 'none', borderRadius: 'var(--radius-sm)',
-              fontSize: '13px', fontWeight: 700,
-              cursor: addTitleInput.trim() ? 'pointer' : 'default',
-              fontFamily: 'DM Sans, sans-serif', whiteSpace: 'nowrap',
-              transition: 'background 0.12s, color 0.12s',
-            }}
-          >
-            + Ajouter
-          </button>
-        </div>
-
         {store.items.filter(i => i.listId === activeList).length === 0 && (
           <div style={{ textAlign: 'center', paddingTop: '32px', color: 'var(--text-2)', fontSize: '13px' }}>
             <div style={{ fontSize: '32px', marginBottom: '12px' }}>{currentList?.icon ?? '⭐'}</div>
-            Liste vide — tape un titre ci-dessus ou ajoute depuis le Catalogue
+            {searchFilter.trim() ? (
+              <button
+                onClick={handleAddFromSearch}
+                style={{
+                  marginTop: '8px', padding: '10px 20px',
+                  background: 'var(--navy)', color: 'white',
+                  border: 'none', borderRadius: 'var(--radius-sm)',
+                  fontSize: '13px', fontWeight: 700,
+                  cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
+                }}
+              >
+                + Ajouter &laquo;{searchFilter.trim()}&raquo;
+              </button>
+            ) : (
+              <span>Liste vide — tape un titre dans le champ ci-dessus ou ajoute depuis le Catalogue</span>
+            )}
           </div>
         )}
         {store.items.filter(i => i.listId === activeList).length > 0 && allItems.length === 0 && (
           <div style={{ textAlign: 'center', paddingTop: '32px', color: 'var(--text-2)', fontSize: '13px' }}>
-            Aucun résultat pour &ldquo;{searchFilter}&rdquo;
+            <div style={{ marginBottom: '14px' }}>Pas dans la liste — pas encore au catalogue ?</div>
+            <button
+              onClick={handleAddFromSearch}
+              style={{
+                padding: '10px 20px',
+                background: 'var(--navy)', color: 'white',
+                border: 'none', borderRadius: 'var(--radius-sm)',
+                fontSize: '13px', fontWeight: 700,
+                cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
+              }}
+            >
+              + Ajouter &laquo;{searchFilter.trim()}&raquo; à la liste
+            </button>
           </div>
         )}
 
@@ -727,6 +722,17 @@ export default function EnviesPage() {
   )
 }
 
+function formatCheckedAt(ts: number | null): string | null {
+  if (!ts) return null
+  const diff = Date.now() - ts
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1) return 'à l\'instant'
+  if (mins < 60) return `il y a ${mins} min`
+  const hours = Math.floor(mins / 60)
+  if (hours < 24) return `il y a ${hours}h`
+  return `il y a ${Math.floor(hours / 24)}j`
+}
+
 function Section({ label, count, accent, children }: {
   label: string; count: number; accent: string; children: React.ReactNode
 }) {
@@ -833,6 +839,12 @@ function ItemCard({
 
         {isError && (
           <div style={{ fontSize: '11px', color: 'var(--red)' }}>Erreur — réessayer</div>
+        )}
+
+        {item.checkedAt && !isChecking && (
+          <div style={{ fontSize: '10px', color: 'var(--text-2)', marginTop: '3px', fontFamily: 'DM Mono, monospace', opacity: 0.6 }}>
+            vérifié {formatCheckedAt(item.checkedAt)}
+          </div>
         )}
       </div>
 

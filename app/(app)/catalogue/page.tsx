@@ -63,6 +63,12 @@ function relevanceScore(title: string, q: string): number {
   return 0
 }
 
+type CatalogueCloudPrefs = {
+  presetsState: PresetsState
+  customPresets: FilterPreset[]
+  library: LibraryKey
+}
+
 const CUSTOM_PRESETS_KEY = 'catalogue_custom_presets'
 
 function loadCustomPresets(): FilterPreset[] {
@@ -91,6 +97,9 @@ export default function CataloguePage() {
   const [showManagePresets, setShowManagePresets] = useState(false)
   const [presetsState, setPresetsState] = useState<PresetsState>({ hiddenIds: [], orderedIds: [] })
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const cloudSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const cloudLoaded = useRef(false)
+  const cataloguePrefsRef = useRef<CatalogueCloudPrefs>({ presetsState: { hiddenIds: [], orderedIds: [] }, customPresets: [], library: 'malraux_neudorf' })
   const PAGE_SIZE = 20
 
   const orderedPresets = useMemo(() => {
@@ -113,6 +122,7 @@ export default function CataloguePage() {
 
   function mutatePresetsState(updater: (s: PresetsState) => PresetsState) {
     setPresetsState(prev => { const next = updater(prev); savePresetsState(next); return next })
+    scheduleCloudSave()
   }
 
   function togglePresetVisibility(id: string) {
@@ -134,12 +144,44 @@ export default function CataloguePage() {
     })
   }
 
-  // Load saved data
+  // Keep ref in sync for cloud saves
   useEffect(() => {
-    setCustomPresets(loadCustomPresets())
-    setPresetsState(loadPresetsState())
+    cataloguePrefsRef.current = { presetsState, customPresets, library }
+  }, [presetsState, customPresets, library])
+
+  function scheduleCloudSave() {
+    if (!cloudLoaded.current) return
+    if (cloudSaveTimer.current) clearTimeout(cloudSaveTimer.current)
+    cloudSaveTimer.current = setTimeout(() => {
+      fetch('/api/catalogue-prefs', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prefs: cataloguePrefsRef.current }),
+      }).catch(() => {})
+    }, 200)
+  }
+
+  // Load saved data — local first, then cloud
+  useEffect(() => {
+    const localPresetsState = loadPresetsState()
+    const localCustomPresets = loadCustomPresets()
+    setPresetsState(localPresetsState)
+    setCustomPresets(localCustomPresets)
     const store = loadStore()
     setLibrary(store.defaultLibrary)
+
+    fetch('/api/catalogue-prefs')
+      .then(r => r.json())
+      .then((data: { prefs?: CatalogueCloudPrefs }) => {
+        if (data.prefs) {
+          const p = data.prefs
+          if (p.presetsState) { setPresetsState(p.presetsState); savePresetsState(p.presetsState) }
+          if (p.customPresets?.length) { setCustomPresets(p.customPresets); saveCustomPresets(p.customPresets) }
+          if (p.library) setLibrary(p.library)
+        }
+      })
+      .catch(() => {})
+      .finally(() => { cloudLoaded.current = true })
   }, [])
 
   // Debounce search input
@@ -213,6 +255,7 @@ export default function CataloguePage() {
     setPreset(newP.id)
     setShowSaveModal(false)
     setNewPresetName('')
+    scheduleCloudSave()
   }
 
   function deleteCustomPreset(id: string) {
@@ -240,7 +283,7 @@ export default function CataloguePage() {
           {/* Library selector */}
           <select
             value={library}
-            onChange={e => setLibrary(e.target.value as LibraryKey)}
+            onChange={e => { setLibrary(e.target.value as LibraryKey); scheduleCloudSave() }}
             style={{
               fontSize: '11px', fontWeight: 600,
               padding: '5px 10px',
@@ -618,15 +661,23 @@ function CatalogCard({ item, onAddToList }: { item: CatalogueItem; onAddToList: 
           style={{
             background: 'var(--navy)', color: 'white',
             border: 'none', borderRadius: '20px',
-            padding: '4px 10px', fontSize: '10px', fontWeight: 700,
+            padding: '8px 14px', fontSize: '12px', fontWeight: 700,
             cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', whiteSpace: 'nowrap',
+            minHeight: '36px',
           }}
         >
           + Liste
         </button>
         {item.url && (
           <a href={item.url} target="_blank" rel="noopener noreferrer"
-            style={{ fontSize: '11px', color: 'var(--text-2)', textDecoration: 'none' }}>
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              padding: '8px 14px', minHeight: '36px', borderRadius: '20px',
+              background: 'var(--tab-inactive-bg)',
+              fontSize: '12px', fontWeight: 700, color: 'var(--text-2)',
+              textDecoration: 'none', whiteSpace: 'nowrap',
+              fontFamily: 'DM Sans, sans-serif',
+            }}>
             →
           </a>
         )}
