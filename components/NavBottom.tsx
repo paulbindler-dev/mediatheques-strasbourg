@@ -1,7 +1,8 @@
 'use client'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import { User, Search, Bookmark } from 'lucide-react'
 
 function useFoundCount(): number {
   const [count, setCount] = useState(0)
@@ -10,13 +11,12 @@ function useFoundCount(): number {
       try {
         const raw = localStorage.getItem('mediatheques_wishlists_v2')
         if (!raw) return setCount(0)
-        const store = JSON.parse(raw) as { items?: { status: string }[] }
-        setCount((store.items ?? []).filter(i => i.status === 'found' && (i as {match?: {available?: boolean}}).match?.available === true).length)
+        const store = JSON.parse(raw) as { items?: { status: string; match?: { available?: boolean } }[] }
+        setCount((store.items ?? []).filter(i => i.status === 'found' && i.match?.available === true).length)
       } catch { setCount(0) }
     }
     read()
     window.addEventListener('storage', read)
-    // Poll lightly so badge updates after a check-all on the Envies page
     const t = setInterval(read, 5000)
     return () => { window.removeEventListener('storage', read); clearInterval(t) }
   }, [])
@@ -24,67 +24,122 @@ function useFoundCount(): number {
 }
 
 const TABS = [
-  { href: '/compte',    label: 'Compte',    icon: '👤', badge: false },
-  { href: '/catalogue', label: 'Catalogue', icon: '🔍', badge: false },
-  { href: '/envies',    label: 'Listes',    icon: '⭐', badge: true  },
+  { href: '/compte',    label: 'Compte',    Icon: User,     badge: false },
+  { href: '/catalogue', label: 'Catalogue', Icon: Search,   badge: false },
+  { href: '/envies',    label: 'Listes',    Icon: Bookmark, badge: true  },
 ]
+
+const TAB_HREFS = TABS.map(t => t.href)
 
 export default function NavBottom() {
   const path = usePathname()
+  const router = useRouter()
   const foundCount = useFoundCount()
+
+  useEffect(() => {
+    let startX = 0
+    let startY = 0
+
+    function onTouchStart(e: TouchEvent) {
+      startX = e.touches[0].clientX
+      startY = e.touches[0].clientY
+    }
+
+    function onTouchEnd(e: TouchEvent) {
+      const dx = e.changedTouches[0].clientX - startX
+      const dy = Math.abs(e.changedTouches[0].clientY - startY)
+      if (Math.abs(dx) < 55 || dy > 60) return
+      const idx = TAB_HREFS.findIndex(h => path.startsWith(h))
+      if (idx === -1) return
+      if (dx < 0 && idx < TAB_HREFS.length - 1) router.push(TAB_HREFS[idx + 1])
+      if (dx > 0 && idx > 0) router.push(TAB_HREFS[idx - 1])
+    }
+
+    document.addEventListener('touchstart', onTouchStart, { passive: true })
+    document.addEventListener('touchend', onTouchEnd, { passive: true })
+    return () => {
+      document.removeEventListener('touchstart', onTouchStart)
+      document.removeEventListener('touchend', onTouchEnd)
+    }
+  }, [path, router])
+
+  const activeIdx = TAB_HREFS.findIndex(h => path.startsWith(h))
 
   return (
     <nav style={{
       position: 'fixed', bottom: 0, left: 0, right: 0,
-      height: 'var(--nav-h)',
       background: 'var(--nav-bg)',
       backdropFilter: 'blur(20px)',
       WebkitBackdropFilter: 'blur(20px)',
       borderTop: '0.5px solid var(--border)',
-      display: 'flex',
-      justifyContent: 'space-around',
-      alignItems: 'center',
       zIndex: 100,
     }}>
-      {TABS.map(tab => {
-        const active = path.startsWith(tab.href)
-        const showBadge = tab.badge && foundCount > 0
-        return (
-          <Link key={tab.href} href={tab.href} style={{
-            display: 'flex', flexDirection: 'column', alignItems: 'center',
-            gap: '3px', textDecoration: 'none', flex: 1, padding: '8px 0',
-          }}>
-            <span style={{ fontSize: '20px', opacity: active ? 1 : 0.22, lineHeight: 1, position: 'relative', display: 'inline-block' }}>
-              {tab.icon}
-              {showBadge && (
-                <span style={{
-                  position: 'absolute', top: '-3px', right: '-6px',
-                  minWidth: '14px', height: '14px',
-                  background: 'var(--green)',
-                  borderRadius: '7px',
-                  fontSize: '8px', fontWeight: 800,
-                  color: 'white',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  padding: '0 3px',
-                  fontFamily: 'DM Sans, sans-serif',
-                  lineHeight: 1,
-                }}>
-                  {foundCount}
-                </span>
-              )}
-            </span>
-            <span style={{
-              fontSize: '9px',
-              fontWeight: active ? 800 : 500,
-              color: active ? 'var(--color-heading)' : 'var(--text-2)',
-              fontFamily: 'DM Sans, sans-serif',
-              letterSpacing: '0.01em',
+      {/* Swipe position dots */}
+      <div style={{
+        display: 'flex', justifyContent: 'center', gap: '5px',
+        paddingTop: '6px',
+      }}>
+        {TABS.map((_, i) => (
+          <div key={i} style={{
+            height: '3px',
+            width: '16px',
+            borderRadius: '2px',
+            background: i === activeIdx ? 'var(--color-heading)' : 'var(--border)',
+            transform: i === activeIdx ? 'scaleX(1)' : 'scaleX(0.31)',
+            transformOrigin: 'center',
+            transition: 'transform 0.22s ease, background 0.22s ease',
+          }} />
+        ))}
+      </div>
+
+      {/* Tab items */}
+      <div style={{
+        display: 'flex', justifyContent: 'space-around', alignItems: 'center',
+        height: '52px',
+      }}>
+        {TABS.map(({ href, label, Icon, badge }) => {
+          const active = path.startsWith(href)
+          const showBadge = badge && foundCount > 0
+          return (
+            <Link key={href} href={href} style={{
+              display: 'flex', flexDirection: 'column', alignItems: 'center',
+              gap: '2px', textDecoration: 'none', flex: 1, padding: '4px 0',
+              position: 'relative',
             }}>
-              {tab.label}
-            </span>
-          </Link>
-        )
-      })}
+              <span style={{ position: 'relative', display: 'inline-flex' }}>
+                <Icon
+                  size={22}
+                  strokeWidth={active ? 2.5 : 1.8}
+                  color={active ? 'var(--color-heading)' : 'var(--text-2)'}
+                />
+                {showBadge && (
+                  <span style={{
+                    position: 'absolute', top: '-4px', right: '-8px',
+                    minWidth: '16px', height: '16px',
+                    background: 'var(--green)', borderRadius: '8px',
+                    fontSize: '9px', fontWeight: 800, color: 'white',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    padding: '0 3px', fontFamily: 'DM Sans, sans-serif', lineHeight: 1,
+                  }}>
+                    {foundCount}
+                  </span>
+                )}
+              </span>
+              <span style={{
+                fontSize: '9px',
+                fontWeight: active ? 800 : 500,
+                color: active ? 'var(--color-heading)' : 'var(--text-2)',
+                fontFamily: 'DM Sans, sans-serif',
+              }}>
+                {label}
+              </span>
+            </Link>
+          )
+        })}
+      </div>
+
+      {/* iOS safe area */}
+      <div style={{ height: 'env(safe-area-inset-bottom, 0px)' }} />
     </nav>
   )
 }

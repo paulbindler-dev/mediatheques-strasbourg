@@ -266,7 +266,7 @@ export default function EnviesPage() {
       {/* Header */}
       <div style={{ background: 'var(--surface)', padding: '20px 18px 0', borderBottom: '1px solid var(--border)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-          <div style={{ fontSize: '24px', fontWeight: 700, color: 'var(--color-heading)', letterSpacing: '-0.4px', fontFamily: 'Georgia, serif' }}>
+          <div style={{ fontSize: '26px', fontWeight: 800, color: 'var(--color-heading)', letterSpacing: '-0.5px', fontFamily: 'DM Sans, sans-serif' }}>
             Mes listes
           </div>
           <select
@@ -368,7 +368,7 @@ export default function EnviesPage() {
       </div>
 
       {/* Content */}
-      <div style={{ padding: '14px 16px', flex: 1 }}>
+      <div style={{ padding: '14px 16px', flex: 1, background: '#E4E6EA' }}>
 
         {store.items.filter(i => i.listId === activeList).length === 0 && (
           <div style={{ textAlign: 'center', paddingTop: '32px', color: 'var(--text-2)', fontSize: '13px' }}>
