@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
+import { Trash2 } from 'lucide-react'
 import type { CatalogueItem } from '@/app/api/catalogue/search/route'
 import {
   loadStore, saveStore, addItem, removeItem, updateItem,
@@ -287,7 +288,7 @@ export default function EnviesPage() {
         </div>
 
         {/* Search — same position as Catalogue (inside header, above tabs) */}
-        <div style={{ position: 'relative', marginBottom: '10px' }}>
+        <div style={{ position: 'relative', marginBottom: '14px' }}>
           <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', fontSize: '14px', pointerEvents: 'none', opacity: 0.5 }}>
             🔍
           </span>
@@ -368,7 +369,7 @@ export default function EnviesPage() {
       </div>
 
       {/* Content */}
-      <div style={{ padding: '14px 16px', flex: 1, background: '#E4E6EA' }}>
+      <div style={{ padding: '14px 16px', flex: 1, background: 'var(--content-bg)' }}>
 
         {store.items.filter(i => i.listId === activeList).length === 0 && (
           <div style={{ textAlign: 'center', paddingTop: '32px', color: 'var(--text-2)', fontSize: '13px' }}>
@@ -411,7 +412,7 @@ export default function EnviesPage() {
 
         {allItems.length > 0 && (
           <>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
               <div style={{ fontSize: '10px', color: 'var(--text-2)', fontFamily: 'DM Mono, monospace' }}>
                 {(() => {
                   const nAvail = found.filter(i => i.match?.available === true).length
@@ -435,6 +436,14 @@ export default function EnviesPage() {
                 {globalChecking ? 'Vérification…' : '↻ Tout vérifier'}
               </button>
             </div>
+            {(() => {
+              const lastCheckedAt = allItems.reduce((max, i) => Math.max(max, i.checkedAt ?? 0), 0) || null
+              return lastCheckedAt ? (
+                <div style={{ fontSize: '10px', color: 'var(--text-2)', fontFamily: 'DM Mono, monospace', marginBottom: '14px', opacity: 0.7 }}>
+                  vérifié {formatCheckedAt(lastCheckedAt)}
+                </div>
+              ) : <div style={{ marginBottom: '14px' }} />
+            })()}
 
             {found.length > 0 && (
               <>
@@ -445,29 +454,26 @@ export default function EnviesPage() {
                   return (
                     <>
                       {available.length > 0 && (
-                        <Section label="Disponible à emprunter" count={available.length} accent="var(--green)">
+                        <Section label="Disponible" count={available.length} accent="var(--green)">
                           {available.map(item => (
                             <ItemCard key={item.id} item={item}
-                              onRemove={id => mutate(s => removeItem(s, id))}
-                              onRefresh={item => checkItem(item, store.defaultLibrary)} />
+                              onRemove={id => mutate(s => removeItem(s, id))} />
                           ))}
                         </Section>
                       )}
                       {loaned.length > 0 && (
-                        <Section label="Actuellement emprunté" count={loaned.length} accent="var(--orange)">
+                        <Section label="Emprunté" count={loaned.length} accent="var(--orange)">
                           {loaned.map(item => (
                             <ItemCard key={item.id} item={item}
-                              onRemove={id => mutate(s => removeItem(s, id))}
-                              onRefresh={item => checkItem(item, store.defaultLibrary)} />
+                              onRemove={id => mutate(s => removeItem(s, id))} />
                           ))}
                         </Section>
                       )}
                       {unknown.length > 0 && (
-                        <Section label="Trouvé au catalogue" count={unknown.length} accent="var(--text-2)">
+                        <Section label="Au catalogue" count={unknown.length} accent="var(--text-2)">
                           {unknown.map(item => (
                             <ItemCard key={item.id} item={item}
-                              onRemove={id => mutate(s => removeItem(s, id))}
-                              onRefresh={item => checkItem(item, store.defaultLibrary)} />
+                              onRemove={id => mutate(s => removeItem(s, id))} />
                           ))}
                         </Section>
                       )}
@@ -478,13 +484,12 @@ export default function EnviesPage() {
             )}
 
             {notFound.length > 0 && (
-              <Section label="Non disponible" count={notFound.length} accent="var(--text-2)">
+              <Section label="Pas trouvé" count={notFound.length} accent="var(--text-2)">
                 {notFound.map(item => (
                   <ItemCard
                     key={item.id}
                     item={item}
                     onRemove={id => mutate(s => removeItem(s, id))}
-                    onRefresh={item => checkItem(item, store.defaultLibrary)}
                   />
                 ))}
               </Section>
@@ -497,7 +502,6 @@ export default function EnviesPage() {
                     key={item.id}
                     item={item}
                     onRemove={id => mutate(s => removeItem(s, id))}
-                    onRefresh={item => checkItem(item, store.defaultLibrary)}
                   />
                 ))}
               </Section>
@@ -757,109 +761,179 @@ function Section({ label, count, accent, children }: {
 function ItemCard({
   item,
   onRemove,
-  onRefresh,
 }: {
   item: WishlistItem
   onRemove: (id: string) => void
-  onRefresh: (item: WishlistItem) => void
 }) {
+  const [swipeX, setSwipeX] = useState(0)
+  const [animating, setAnimating] = useState(false)
+  const [hovered, setHovered] = useState(false)
+  const startXRef = useRef(0)
+  const startYRef = useRef(0)
+  const startSwipeXRef = useRef(0)
+  const dirRef = useRef<'h' | 'v' | null>(null)
+
+  const OPEN = -84
+  const reducedMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
   const isFound = item.status === 'found'
   const isChecking = item.status === 'checking'
   const isError = item.status === 'error'
   const isLoaned = isFound && item.match?.available === false
   const isAvailable = isFound && item.match?.available === true
-  const availabilityUnknown = isFound && item.match?.available === undefined
+
   const dotColor = isAvailable ? 'var(--green)'
     : isLoaned ? 'var(--orange)'
     : isError ? 'var(--red)'
     : isChecking ? 'var(--orange)'
-    : availabilityUnknown ? 'var(--border)'
-    : isFound ? 'var(--green)'
     : 'var(--border)'
+
+  let subtitleNode: React.ReactNode = null
+  if (isChecking) {
+    subtitleNode = <span style={{ fontFamily: 'DM Mono, monospace' }}>Vérification…</span>
+  } else if (isError) {
+    subtitleNode = <span style={{ color: 'var(--red)' }}>Erreur</span>
+  } else if (isFound && item.match) {
+    const location = item.foundAt ?? ''
+    if (isLoaned && item.match.dueDate) {
+      subtitleNode = (
+        <>
+          {location && <span style={{ color: 'var(--orange)', fontWeight: 500 }}>{location}</span>}
+          <span style={{ color: 'var(--text-2)' }}>{location ? ` · ${item.match.dueDate}` : item.match.dueDate}</span>
+        </>
+      )
+    } else {
+      subtitleNode = location
+        ? <span style={{ color: isAvailable ? 'var(--green)' : 'var(--text-2)', fontWeight: 500 }}>{location}</span>
+        : null
+    }
+  } else if (item.status === 'not_found') {
+    subtitleNode = <span style={{ color: 'var(--text-2)' }}>Pas trouvé</span>
+  }
+
+  const url = item.match?.url ?? null
+
+  function handleDelete() {
+    navigator.vibrate?.(8)
+    onRemove(item.id)
+  }
+
+  function snapTo(x: number) {
+    setAnimating(true)
+    setSwipeX(x)
+  }
+
+  function handleTouchStart(e: React.TouchEvent) {
+    startXRef.current = e.touches[0].clientX
+    startYRef.current = e.touches[0].clientY
+    startSwipeXRef.current = swipeX
+    dirRef.current = null
+    setAnimating(false)
+  }
+
+  function handleTouchMove(e: React.TouchEvent) {
+    const dx = e.touches[0].clientX - startXRef.current
+    const dy = Math.abs(e.touches[0].clientY - startYRef.current)
+    if (dirRef.current === null) {
+      // If panel is open, intercept horizontal gestures early so tab-switcher never sees them
+      if (startSwipeXRef.current < 0 && Math.abs(dx) > 3) {
+        dirRef.current = 'h'
+        e.stopPropagation()
+      } else if (Math.abs(dx) > 6 || dy > 6) {
+        dirRef.current = Math.abs(dx) > dy ? 'h' : 'v'
+      }
+      return
+    }
+    if (dirRef.current !== 'h') return
+    const newX = Math.min(0, Math.max(OPEN, startSwipeXRef.current + dx))
+    e.stopPropagation()
+    setSwipeX(newX)
+  }
+
+  function handleTouchEnd(e: React.TouchEvent) {
+    if (dirRef.current !== 'h') return
+    // Bloquer l'événement natif pour que NavBottom (écouteur sur document) ne capture pas le swipe
+    e.nativeEvent.stopPropagation()
+    if (swipeX < OPEN / 2) {
+      snapTo(OPEN)
+    } else {
+      snapTo(0)
+    }
+  }
+
+  function handleClick() {
+    if (swipeX < 0) { snapTo(0); return }
+    if (url) window.open(url, '_blank', 'noopener,noreferrer')
+  }
+
   return (
-    <div style={{
-      padding: '11px 13px', display: 'flex', alignItems: 'flex-start', gap: '10px',
-    }}>
-      <div style={{
-        width: '8px', height: '8px', borderRadius: '50%', marginTop: '4px', flexShrink: 0,
-        background: dotColor,
-        animation: isChecking ? 'pulse 1s infinite' : 'none',
-      }} />
-
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: '13.5px', fontWeight: 700, color: 'var(--color-heading)', marginBottom: '2px' }}>
-          {item.title}
+    <div data-swipeable style={{ position: 'relative', overflow: 'hidden' }}>
+      {/* Delete button (swipe reveal) */}
+      <div
+        role="button"
+        aria-label="Supprimer"
+        style={{
+          position: 'absolute', right: 0, top: 0, bottom: 0,
+          width: '84px',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          paddingRight: '10px',
+          cursor: 'pointer',
+        }}
+        onClick={handleDelete}
+      >
+        <div style={{
+          width: '40px', height: '40px',
+          background: 'var(--red)',
+          borderRadius: '50%',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <Trash2 size={18} color="white" strokeWidth={2} />
         </div>
-
-        {isFound && item.match && (
-          <div style={{ fontSize: '11px', color: 'var(--text-2)', display: 'flex', flexDirection: 'column', gap: '2px' }}>
-            {item.foundAt && (
-              <span style={{ fontWeight: 600, color: isLoaned ? 'var(--orange)' : 'var(--green)' }}>→ {item.foundAt}</span>
-            )}
-            {isLoaned && (
-              <span style={{ color: 'var(--orange)', fontWeight: 600 }}>
-                {item.match.dueDate ?? 'Emprunté'}
-              </span>
-            )}
-            {availabilityUnknown && (
-              <span style={{ color: 'var(--text-2)', fontSize: '10.5px' }}>
-                Trouvé au catalogue · disponibilité non vérifiée
-              </span>
-            )}
-            {item.match.title.toLowerCase() !== item.title.toLowerCase() && (
-              <span style={{ fontStyle: 'italic' }}>{item.match.title}</span>
-            )}
-            {(item.match.publisher || item.match.year) && (
-              <span>{[item.match.publisher, item.match.year].filter(Boolean).join(' · ')}</span>
-            )}
-            {item.match.url && (
-              <a href={item.match.url} target="_blank" rel="noopener noreferrer"
-                style={{ color: 'var(--navy)', fontWeight: 600, textDecoration: 'none' }}>
-                Voir au catalogue →
-              </a>
-            )}
-          </div>
-        )}
-
-        {item.status === 'not_found' && (
-          <div style={{ fontSize: '11px', color: 'var(--text-2)' }}>
-            Pas trouvé dans cette médiathèque
-          </div>
-        )}
-
-        {isChecking && (
-          <div style={{ fontSize: '11px', color: 'var(--text-2)', fontFamily: 'DM Mono, monospace' }}>
-            Vérification…
-          </div>
-        )}
-
-        {isError && (
-          <div style={{ fontSize: '11px', color: 'var(--red)' }}>Erreur — réessayer</div>
-        )}
-
-        {item.checkedAt && !isChecking && (
-          <div style={{ fontSize: '11px', color: 'var(--text-2)', marginTop: '3px', fontFamily: 'DM Mono, monospace' }}>
-            vérifié {formatCheckedAt(item.checkedAt)}
-          </div>
-        )}
       </div>
 
-      <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
-        {item.status !== 'checking' && (
-          <button
-            onClick={() => onRefresh(item)}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-2)', fontSize: '14px', padding: '2px 4px' }}
-            title="Revérifier"
-          >
-            ↻
-          </button>
-        )}
+      {/* Item row */}
+      <div
+        onClick={handleClick}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        style={{
+          padding: '9px 14px', display: 'flex', alignItems: 'flex-start', gap: '10px',
+          cursor: url ? 'pointer' : 'default',
+          background: 'var(--surface)',
+          transform: `translateX(${swipeX}px)`,
+          transition: animating && !reducedMotion ? 'transform 0.2s cubic-bezier(0.25, 0, 0, 1)' : 'none',
+          willChange: 'transform',
+        }}
+      >
+        <div style={{
+          width: '7px', height: '7px', borderRadius: '50%', flexShrink: 0, marginTop: '4px',
+          background: dotColor,
+          animation: isChecking ? 'pulse 1s infinite' : 'none',
+        }} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-heading)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {item.title}
+          </div>
+          {subtitleNode && (
+            <div style={{ fontSize: '12px', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {subtitleNode}
+            </div>
+          )}
+        </div>
+        {/* Desktop-only trash — visible on hover, invisible on touch */}
         <button
-          onClick={() => onRemove(item.id)}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--red)', fontSize: '18px', padding: '2px 6px', lineHeight: 1, opacity: 0.7 }}
-          title="Supprimer"
+          onClick={e => { e.stopPropagation(); handleDelete() }}
+          style={{
+            background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px',
+            color: 'var(--red)', opacity: hovered ? 0.55 : 0,
+            transition: 'opacity 0.15s', flexShrink: 0, alignSelf: 'center',
+          }}
+          tabIndex={-1}
         >
-          ×
+          <Trash2 size={14} strokeWidth={2} />
         </button>
       </div>
     </div>

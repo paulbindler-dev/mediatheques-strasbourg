@@ -115,7 +115,7 @@ export default function ComptePage() {
       </div>
 
       {/* List */}
-      <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '9px' }}>
+      <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '12px', background: 'var(--content-bg)', minHeight: '100%' }}>
         {apiError && (
           <div style={{ padding: '16px', background: 'var(--surface)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
             <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-heading)', marginBottom: '4px' }}>
@@ -156,12 +156,16 @@ export default function ComptePage() {
             Aucun prêt en cours
           </div>
         )}
-        {!loading && tab === 'reservations' && bookings.map(b => (
-          <BookingCard key={b.Id} b={b} />
-        ))}
-        {!loading && tab === 'prets' && loans.map((l, i) => (
-          <LoanCard key={l.HoldingId || i} l={l} />
-        ))}
+        {!loading && tab === 'reservations' && bookings.length > 0 && (
+          <div className="group-items" style={{ background: 'var(--surface)', borderRadius: '12px', overflow: 'hidden' }}>
+            {bookings.map(b => <BookingCard key={b.Id} b={b} />)}
+          </div>
+        )}
+        {!loading && tab === 'prets' && loans.length > 0 && (
+          <div className="group-items" style={{ background: 'var(--surface)', borderRadius: '12px', overflow: 'hidden' }}>
+            {loans.map((l, i) => <LoanCard key={l.HoldingId || i} l={l} />)}
+          </div>
+        )}
       </div>
     </div>
   )

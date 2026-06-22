@@ -19,9 +19,6 @@ export default function LoanCard({ l }: { l: IguanaLoan }) {
     <div style={{
       display: 'flex', alignItems: 'center', gap: '12px',
       padding: '12px',
-      borderRadius: 'var(--radius)',
-      background: 'var(--surface)',
-      boxShadow: '0 1px 6px rgba(0,0,0,0.06)',
     }}>
       <img
         src={thumb}

@@ -39,13 +39,16 @@ export default function NavBottom() {
   useEffect(() => {
     let startX = 0
     let startY = 0
+    let startedInSwipeable = false
 
     function onTouchStart(e: TouchEvent) {
       startX = e.touches[0].clientX
       startY = e.touches[0].clientY
+      startedInSwipeable = !!(e.target as HTMLElement).closest?.('[data-swipeable]')
     }
 
     function onTouchEnd(e: TouchEvent) {
+      if (startedInSwipeable) return
       const dx = e.changedTouches[0].clientX - startX
       const dy = Math.abs(e.changedTouches[0].clientY - startY)
       if (Math.abs(dx) < 55 || dy > 60) return
