@@ -11,7 +11,7 @@ function useFoundCount(): number {
         const raw = localStorage.getItem('mediatheques_wishlists_v2')
         if (!raw) return setCount(0)
         const store = JSON.parse(raw) as { items?: { status: string }[] }
-        setCount((store.items ?? []).filter(i => i.status === 'found').length)
+        setCount((store.items ?? []).filter(i => i.status === 'found' && (i as {match?: {available?: boolean}}).match?.available === true).length)
       } catch { setCount(0) }
     }
     read()
@@ -67,7 +67,7 @@ export default function NavBottom() {
                   fontFamily: 'DM Sans, sans-serif',
                   lineHeight: 1,
                 }}>
-                  {foundCount > 9 ? '9+' : foundCount}
+                  {foundCount}
                 </span>
               )}
             </span>
