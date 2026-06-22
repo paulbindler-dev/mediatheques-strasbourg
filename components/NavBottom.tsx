@@ -37,8 +37,10 @@ export default function NavBottom() {
     <nav style={{
       position: 'fixed', bottom: 0, left: 0, right: 0,
       height: 'var(--nav-h)',
-      background: 'var(--surface)',
-      borderTop: '1px solid var(--border)',
+      background: 'var(--nav-bg)',
+      backdropFilter: 'blur(20px)',
+      WebkitBackdropFilter: 'blur(20px)',
+      borderTop: '0.5px solid var(--border)',
       display: 'flex',
       justifyContent: 'space-around',
       alignItems: 'center',
