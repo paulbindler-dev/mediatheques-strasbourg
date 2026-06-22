@@ -277,7 +277,7 @@ export default function CataloguePage() {
       {/* Header */}
       <div style={{ background: 'var(--surface)', padding: '20px 18px 0', borderBottom: '1px solid var(--border)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-          <div style={{ fontSize: '24px', fontWeight: 700, color: 'var(--color-heading)', letterSpacing: '-0.4px', fontFamily: 'Georgia, serif' }}>
+          <div style={{ fontSize: '26px', fontWeight: 800, color: 'var(--color-heading)', letterSpacing: '-0.5px', fontFamily: 'DM Sans, sans-serif' }}>
             Catalogue
           </div>
           {/* Library selector */}
