@@ -31,11 +31,12 @@
   :root {
     --bg:          #0D1B2A;
     --surface:     #162232;
-    --border:      #1E3347;
+    --border:      #243D56;
     --text:        #E2EAF2;
-    --text-2:      #5B7A96;
+    --text-2:      #8BACC8;
     --color-heading: #E2EAF2;
     --tab-inactive-bg: #1A2D40;
+    --navy:        #1E4A8A;
     --error-bg:    rgba(239,68,68,0.12);
     --success-bg:  rgba(34,197,94,0.12);
   }
@@ -57,7 +58,26 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Inputs inherit theme */
-input {
+/* Inputs and selects inherit theme */
+input, select, textarea {
   color-scheme: light dark;
+}
+
+/* Prevent iOS auto-zoom on input focus (triggered when font-size < 16px) */
+@media screen and (max-width: 768px) {
+  input[type="text"],
+  input[type="search"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input:not([type]),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
 }

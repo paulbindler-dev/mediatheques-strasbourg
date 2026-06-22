@@ -3,27 +3,10 @@ import { decrypt, encrypt } from '@/lib/crypto'
 import { loginAndGetCookies as loginServerside } from '@/lib/iguana-auth'
 import type { IguanaCookies } from '@/lib/iguana'
 
-// Prefer the Edge Runtime endpoint (Cloudflare IPs) to avoid Vercel/AWS IP rate-limiting from Iguana
-async function loginViaEdge(card: string, password: string): Promise<{ ci: string; st: string; extra: string }> {
-  const base = process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
-    : (process.env.NEXTAUTH_URL ?? 'http://localhost:3000')
-  const res = await fetch(`${base}/api/iguana/login-edge`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ card, password }),
-  })
-  const json = await res.json() as { ci?: string; st?: string; extra?: string; error?: string }
-  if (!res.ok || !json.ci || !json.st) throw new Error(json.error ?? 'Edge login failed')
-  return { ci: json.ci, st: json.st, extra: json.extra ?? '{}' }
-}
-
+// Direct serverside login — avoids self-referential Vercel calls that can time out
+// under load when multiple items are checked simultaneously.
 async function loginWithFallback(card: string, password: string): Promise<{ ci: string; st: string; extra: string }> {
-  try {
-    return await loginViaEdge(card, password)
-  } catch {
-    return await loginServerside(card, password)
-  }
+  return await loginServerside(card, password)
 }
 
 const SESSION_TTL_MS = 30 * 60 * 1000     // 30 min
