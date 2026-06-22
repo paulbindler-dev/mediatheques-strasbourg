@@ -1,25 +1,46 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getIguanaCookies, forceRefreshIguanaSession } from '@/lib/get-iguana-cookies'
+import { getIguanaCookies } from '@/lib/get-iguana-cookies'
 
 const BASE = 'https://www.mediatheques.strasbourg.eu'
 const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
 
 async function getGuestCookies(): Promise<string> {
   const r = await fetch(`${BASE}/`, { headers: { 'User-Agent': UA, Accept: 'text/html,*/*' } })
-  const setCookie: string[] = typeof (r.headers as unknown as { getSetCookie?: () => string[] }).getSetCookie === 'function'
+  const setCookies: string[] = typeof (r.headers as unknown as { getSetCookie?: () => string[] }).getSetCookie === 'function'
     ? (r.headers as unknown as { getSetCookie: () => string[] }).getSetCookie()
     : [r.headers.get('set-cookie') ?? ''].filter(Boolean)
-  return setCookie.map(c => c.split(';')[0]).filter(Boolean).join('; ')
+  return setCookies.map(c => c.split(';')[0]).filter(Boolean).join('; ')
+}
+
+// Two-step warm-up: homepage first, then document page with those cookies.
+// This mirrors what a real browser does and ensures the ILS session is initialized.
+async function getWarmCookies(rscId: string): Promise<string> {
+  const homeCookies = await getGuestCookies()
+  const r = await fetch(`${BASE}/Default/doc/IGUANA_2/${rscId}/`, {
+    headers: { 'User-Agent': UA, Accept: 'text/html,*/*', Cookie: homeCookies },
+    redirect: 'follow',
+  })
+  const setCookies: string[] = typeof (r.headers as unknown as { getSetCookie?: () => string[] }).getSetCookie === 'function'
+    ? (r.headers as unknown as { getSetCookie: () => string[] }).getSetCookie()
+    : [r.headers.get('set-cookie') ?? ''].filter(Boolean)
+  const docCookies = setCookies.map(c => c.split(';')[0]).filter(Boolean).join('; ')
+  const merged = new Map<string, string>()
+  for (const pair of homeCookies.split('; ')) {
+    const eq = pair.indexOf('='); if (eq > 0) merged.set(pair.slice(0, eq), pair.slice(eq + 1))
+  }
+  for (const pair of docCookies.split('; ')) {
+    const eq = pair.indexOf('='); if (eq > 0) merged.set(pair.slice(0, eq), pair.slice(eq + 1))
+  }
+  const parts: string[] = []
+  merged.forEach((v, k) => parts.push(`${k}=${v}`))
+  return parts.join('; ')
 }
 
 type IguanaHolding = {
   IsAvailable: boolean
-  Statut: string
   WhenBack: string | null
   Site: string
-  Localisation: string
-  RecordId: string
-  HoldingId: string
+  Statut: string
 }
 
 type GetHoldingsResponse = {
@@ -27,11 +48,8 @@ type GetHoldingsResponse = {
   errors?: { msg: string }[]
   d?: {
     Holdings?: IguanaHolding[]
-    ItemHoldingsData?: {
-      Availability: number
-      HoldingLabel: string | null
-      RecordId: string
-    }
+    ItemHoldingsData?: { Availability: number; HoldingLabel: string | null }
+    [key: string]: unknown
   }
 }
 
@@ -48,39 +66,49 @@ function buildCookieHeader(cookies: { ci: string; st: string; extra?: string }):
   if (cookies.extra) {
     try {
       const jar = JSON.parse(cookies.extra) as Record<string, string>
-      if (jar['_syrSessGuid']) h += `; _syrSessGuid=${jar['_syrSessGuid']}`
+      for (const [k, v] of Object.entries(jar)) h += `; ${k}=${v}`
     } catch { /* ignore */ }
   }
   return h
 }
 
-async function fetchGetHoldings(cookieHeader: string, rscId: string): Promise<GetHoldingsResponse | null> {
+async function fetchGetHoldings(
+  cookieHeader: string,
+  rscId: string,
+  docbase: string,
+): Promise<GetHoldingsResponse | null> {
+  // Correct Ermes body format discovered from portal-front-all.js:
+  // {Record: {RscId, Docbase}} — no id prefix, no BaseName/lang wrapper
+  const body = { Record: { RscId: rscId, Docbase: docbase } }
   const res = await fetch(`${BASE}/Portal/Services/ILSClient.svc/GetHoldings`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'X-Requested-With': 'XMLHttpRequest',
-      Accept: 'application/json, text/plain, */*',
+      Accept: 'application/json, text/javascript, */*; q=0.01',
       Cookie: cookieHeader,
       Referer: `${BASE}/Default/doc/IGUANA_2/${rscId}/`,
       'User-Agent': UA,
-      Origin: BASE,
     },
-    body: JSON.stringify({ id: `_${rscId}`, BaseName: 'IGUANA_2', lang: 'fr' }),
+    body: JSON.stringify(body),
     cache: 'no-store',
   })
   if (!res.ok) return null
-  return res.json() as Promise<GetHoldingsResponse>
+  // Force UTF-8 decoding regardless of server's Content-Type charset
+  const buffer = await res.arrayBuffer()
+  const text = new TextDecoder('utf-8').decode(buffer)
+  try { return JSON.parse(text) as GetHoldingsResponse } catch { return null }
 }
 
 function parseHoldingsResult(json: GetHoldingsResponse): HoldingResult | null {
   if (!json.success || !json.d) return null
   const holdings = json.d.Holdings ?? []
   const itemData = json.d.ItemHoldingsData
+  if (holdings.length === 0 && !itemData) return null
   const availableCount = itemData?.Availability ?? holdings.filter(h => h.IsAvailable).length
   const available = availableCount > 0
-  const loanedWithDate = holdings.filter(h => !h.IsAvailable && h.WhenBack).map(h => h.WhenBack as string)
-  const dueDate = available ? null : (loanedWithDate[0] ?? itemData?.HoldingLabel ?? null)
+  const loanedDates = holdings.filter(h => !h.IsAvailable && h.WhenBack).map(h => h.WhenBack as string)
+  const dueDate = available ? null : (loanedDates[0] ?? itemData?.HoldingLabel ?? null)
   const locations = holdings.map(h => ({ site: h.Site, available: h.IsAvailable, whenBack: h.WhenBack ?? null }))
   return { available, availableCount, totalCount: holdings.length, dueDate, locations }
 }
@@ -88,34 +116,25 @@ function parseHoldingsResult(json: GetHoldingsResponse): HoldingResult | null {
 export async function GET(req: NextRequest) {
   const rscId = req.nextUrl.searchParams.get('rscId')
   if (!rscId) return NextResponse.json({ error: 'rscId required' }, { status: 400 })
+  const docbase = req.nextUrl.searchParams.get('docbase') ?? 'IGUANA_2'
 
   try {
-    const iguanaCookies = await getIguanaCookies()
-    console.log(`[holdings] rscId=${rscId} iguanaCookies=${iguanaCookies ? 'ok ci=' + iguanaCookies.ci.slice(0,8) : 'null'}`)
-    const cookieHeader = iguanaCookies ? buildCookieHeader(iguanaCookies) : await getGuestCookies()
+    // Attempt 1: warm anonymous session (most reliable)
+    const warmCookies = await getWarmCookies(rscId)
+    const json1 = await fetchGetHoldings(warmCookies, rscId, docbase)
+    const result1 = json1 ? parseHoldingsResult(json1) : null
+    if (result1) return NextResponse.json(result1 satisfies HoldingResult, { headers: { 'Cache-Control': 'no-store' } })
 
-    let json = await fetchGetHoldings(cookieHeader, rscId)
-    let result = json ? parseHoldingsResult(json) : null
-    console.log(`[holdings] first attempt success=${json?.success} result=${result ? 'ok available=' + result.available : 'null'}`)
-
-    // Iguana returned success:false (session expired) — force refresh and retry once
-    if (!result && iguanaCookies) {
-      console.log('[holdings] retrying with forceRefresh...')
-      const fresh = await forceRefreshIguanaSession({ bypassBackoff: true })
-      if (fresh) {
-        json = await fetchGetHoldings(buildCookieHeader(fresh), rscId)
-        result = json ? parseHoldingsResult(json) : null
-        console.log(`[holdings] retry result=${result ? 'ok available=' + result.available : 'null'}`)
-      }
+    // Attempt 2: patron session (if user is logged in with library card)
+    const patronCookies = await getIguanaCookies()
+    if (patronCookies) {
+      const json2 = await fetchGetHoldings(buildCookieHeader(patronCookies), rscId, docbase)
+      const result2 = json2 ? parseHoldingsResult(json2) : null
+      if (result2) return NextResponse.json(result2 satisfies HoldingResult, { headers: { 'Cache-Control': 'no-store' } })
     }
 
-    if (!result) return NextResponse.json({ error: 'Iguana error', available: null }, { status: 200 })
-
-    return NextResponse.json(result satisfies HoldingResult, {
-      headers: { 'Cache-Control': 'no-store' },
-    })
+    return NextResponse.json({ error: 'availability unavailable', available: null }, { status: 200 })
   } catch (e) {
-    console.error('[holdings] caught:', String(e))
     return NextResponse.json({ error: String(e), available: null }, { status: 200 })
   }
 }

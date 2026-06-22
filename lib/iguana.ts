@@ -29,7 +29,7 @@ export type IguanaLoan = {
   HoldingId: string
 }
 
-export type IguanaCookies = { ci: string; st: string }
+export type IguanaCookies = { ci: string; st: string; extra?: string }
 
 // Iguana dates: "/Date(1781733600000+0200)/"
 export function parseIguanaDate(raw: string | null | undefined): Date | null {
@@ -51,17 +51,32 @@ const BASE = 'https://www.mediatheques.strasbourg.eu'
 async function iguanaGet(path: string, cookies: IguanaCookies) {
   const t = Date.now()
   const url = `${BASE}/Portal/Services/UserAccountService.svc/${path}?serviceCode=IGUANA_2&token=${t}&userUniqueIdentifier=&timestamp=${t}`
+
+  // Build cookie header — _syrSessGuid links the CI/ST tokens to the backend session
+  let cookieHeader = `InstanceCI=CUSB=${cookies.ci}; InstanceST=CUSB=${cookies.st}`
+  if (cookies.extra) {
+    try {
+      const jar = JSON.parse(cookies.extra) as Record<string, string>
+      if (jar['_syrSessGuid']) cookieHeader += `; _syrSessGuid=${jar['_syrSessGuid']}`
+    } catch { /* ignore */ }
+  }
+
   const res = await fetch(url, {
     headers: {
-      Cookie: `InstanceCI=CUSB=${cookies.ci}; InstanceST=CUSB=${cookies.st}`,
+      Cookie: cookieHeader,
       'X-Requested-With': 'XMLHttpRequest',
       Accept: 'application/json, text/javascript, */*; q=0.01',
+      Referer: `${BASE}/default/accueil-portal.aspx`,
+      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
     },
     cache: 'no-store',
   })
   if (!res.ok) throw new Error(`Iguana HTTP ${res.status}`)
   const json = await res.json()
-  if (!json.success) throw new Error('Iguana: success=false')
+  if (!json.success) {
+    const errs = (json.errors || []).map((e: { msg: string }) => e.msg).join(' | ')
+    throw new Error(`Iguana: success=false — ${errs || 'no detail'}`)
+  }
   return json.d
 }
 

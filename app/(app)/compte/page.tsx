@@ -14,6 +14,8 @@ export default function ComptePage() {
   const [loans, setLoans] = useState<IguanaLoan[]>([])
   const [loading, setLoading] = useState(true)
   const [noSession, setNoSession] = useState(false)
+  const [apiError, setApiError] = useState<string | null>(null)
+  const [needsReconnect, setNeedsReconnect] = useState(false)
   const [userName, setUserName] = useState('Paul')
   const router = useRouter()
 
@@ -21,7 +23,8 @@ export default function ComptePage() {
     const sb = getSupabaseBrowser()
     sb.auth.getUser().then(({ data }: { data: { user: { email?: string | null } | null } }) => {
       if (data.user?.email) {
-        setUserName(data.user.email.split('@')[0])
+        const part = data.user.email.split('@')[0].split('.')[0]
+        setUserName(part.charAt(0).toUpperCase() + part.slice(1))
       }
     })
 
@@ -30,10 +33,16 @@ export default function ComptePage() {
       fetch('/api/iguana/loans').then(r => r.json()),
     ]).then(([b, l]) => {
       if (b?.error === 'No session') { setNoSession(true); setLoading(false); return }
+      if (b?.error) {
+        setApiError(b.error)
+        if (b?.needsReconnect) setNeedsReconnect(true)
+        setLoading(false)
+        return
+      }
       setBookings(Array.isArray(b) ? sortBookings(b) : [])
       setLoans(Array.isArray(l) ? l : [])
       setLoading(false)
-    }).catch(() => setLoading(false))
+    }).catch((e) => { setApiError(String(e)); setLoading(false) })
 
     // Request push permission once data loads
     if (typeof window !== 'undefined' && 'Notification' in window && 'serviceWorker' in navigator) {
@@ -55,10 +64,6 @@ export default function ComptePage() {
       }).catch(() => {})
     }
   }, [])
-
-  const now = new Date()
-  const dateStr = now.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
-  const dateLabel = dateStr.charAt(0).toUpperCase() + dateStr.slice(1)
 
   if (noSession) {
     return (
@@ -84,13 +89,10 @@ export default function ComptePage() {
     <div>
       {/* Header */}
       <div style={{ background: 'var(--surface)', padding: '20px 18px 0', borderBottom: '1px solid var(--border)' }}>
-        <div style={{ fontSize: '10px', fontWeight: 500, color: 'var(--text-2)', marginBottom: '2px' }}>
-          {dateLabel}
+        <div style={{ fontSize: '24px', fontWeight: 700, color: 'var(--color-heading)', letterSpacing: '-0.4px', fontFamily: 'Georgia, serif' }}>
+          Bonjour {userName}
         </div>
-        <div style={{ fontSize: '21px', fontWeight: 800, color: 'var(--color-heading)', letterSpacing: '-0.5px' }}>
-          Bonjour, {userName}
-        </div>
-        <div style={{ display: 'flex', gap: '6px', marginTop: '14px' }}>
+        <div style={{ display: 'flex', gap: '6px', marginTop: '14px', paddingBottom: '14px' }}>
           {([
             ['reservations', `Réservations (${bookings.length})`],
             ['prets', `Prêts (${loans.length})`],
@@ -114,6 +116,31 @@ export default function ComptePage() {
 
       {/* List */}
       <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '9px' }}>
+        {apiError && (
+          <div style={{ padding: '16px', background: 'var(--surface)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
+            <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-heading)', marginBottom: '4px' }}>
+              {needsReconnect ? 'Session expirée' : 'Erreur de connexion'}
+            </div>
+            <div style={{ fontSize: '11px', color: 'var(--text-2)', marginBottom: needsReconnect ? '12px' : 0, lineHeight: 1.5 }}>
+              {needsReconnect
+                ? 'La session Iguana a expiré et le renouvellement automatique a échoué. Reconnecte tes identifiants.'
+                : apiError}
+            </div>
+            {needsReconnect && (
+              <button
+                onClick={() => router.push('/compte/onboarding')}
+                style={{
+                  padding: '8px 18px', background: 'var(--navy)', color: 'white',
+                  border: 'none', borderRadius: 'var(--radius-sm)',
+                  fontSize: '12px', fontWeight: 700, cursor: 'pointer',
+                  fontFamily: 'DM Sans, sans-serif',
+                }}
+              >
+                Reconnecter mes identifiants →
+              </button>
+            )}
+          </div>
+        )}
         {loading && (
           <div style={{ color: 'var(--text-2)', fontSize: '13px', textAlign: 'center', paddingTop: '48px', fontFamily: 'DM Mono, monospace' }}>
             Chargement…
