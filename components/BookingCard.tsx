@@ -15,19 +15,15 @@ export default function BookingCard({ b }: { b: IguanaBooking }) {
   }
 
   const showUntil = b.IsAvailable && until && daysLeft !== null && daysLeft > 0
-
   const thumb = b.ThumbnailUrl || b.DefaultThumbnailUrl
+  const isNeudorf = (b.LocationLabel ?? '').toLowerCase().includes('neudorf')
 
   return (
     <a
       href={b.TitleLink || '#'}
       target="_blank"
       rel="noopener noreferrer"
-      style={{
-        display: 'flex', alignItems: 'center', gap: '12px',
-        padding: '12px',
-        textDecoration: 'none',
-      }}
+      style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', textDecoration: 'none' }}
     >
       <img
         src={thumb}
@@ -40,7 +36,12 @@ export default function BookingCard({ b }: { b: IguanaBooking }) {
           {b.Title}
         </div>
         <div style={{ fontSize: '10px', color: 'var(--text-2)', marginTop: '2px' }}>
-          {b.TypeOfDocument}{b.LocationLabel ? ` · ${b.LocationLabel}` : ''}
+          {b.TypeOfDocument}
+          {b.LocationLabel && (
+            <> · <span style={isNeudorf ? { color: 'var(--neudorf)', fontWeight: 600 } : undefined}>
+              {b.LocationLabel}
+            </span></>
+          )}
         </div>
         <div style={{ marginTop: '7px' }}>
           <StatusBadge variant={variant} label={badgeLabel} />

@@ -3,11 +3,11 @@ import NavSidebar from '@/components/NavSidebar'
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ display: 'flex', minHeight: '100vh' }}>
+    <div style={{ display: 'flex', height: '100dvh', paddingTop: 'env(safe-area-inset-top, 0px)' }}>
       <div className="sidebar-wrapper">
         <NavSidebar />
       </div>
-      <main style={{ flex: 1, paddingBottom: 'var(--nav-h)', minWidth: 0 }} className="app-main">
+      <main style={{ flex: 1, paddingBottom: 'var(--nav-h)', minWidth: 0, height: '100%', overflowY: 'auto' }} className="app-main">
         {children}
       </main>
       <div className="bottom-nav-wrapper">

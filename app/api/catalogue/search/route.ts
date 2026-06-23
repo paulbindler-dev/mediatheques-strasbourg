@@ -18,6 +18,7 @@ export type CatalogueItem = {
   desc: string
   url: string
   ean: string | null
+  thumbnail?: string        // cover image URL when available
   location?: string
   available?: boolean       // true = copy on shelf; false = all loaned; undefined = not checked
   dueDate?: string | null   // formatted return date when available === false
@@ -74,6 +75,7 @@ async function searchIguana(
     errors?: { msg: string }[]
     d?: {
       SearchInfo?: { NBResults?: number }
+      HtmlResult?: string
       Results?: {
         FriendlyUrl?: string
         Resource?: Record<string, unknown>
@@ -85,10 +87,25 @@ async function searchIguana(
 
   const d = json.d ?? {}
   const total = d.SearchInfo?.NBResults ?? 0
+
+  // Extract Syracuse cover URLs from HtmlResult: each notice block is keyed by rscId
+  const coverMap: Record<string, string> = {}
+  const htmlResult: string = typeof d.HtmlResult === 'string' ? d.HtmlResult : ''
+  const blocks = htmlResult.split(/data-id="/)
+  for (const block of blocks.slice(1)) {
+    const rscIdMatch = block.match(/^(\d+)"/)
+    if (!rscIdMatch) continue
+    const rscId = rscIdMatch[1]
+    const chunk = block.split('data-id="')[0] ?? block.slice(0, 2000)
+    const coverMatch = chunk.match(/https:\/\/covers\.syracuse\.cloud\/Cover\/[^\s"'<>]+/)
+    if (coverMatch && !coverMap[rscId]) coverMap[rscId] = coverMatch[0]
+  }
+
   const results: CatalogueItem[] = (d.Results ?? []).map(r => {
     const resource = (r.Resource ?? {}) as Record<string, unknown>
+    const rscId = String(resource.RscId ?? '')
     return {
-      rscId: String(resource.RscId ?? ''),
+      rscId,
       title: String(resource.Ttl ?? ''),
       type: String(resource.Type ?? ''),
       subject: String(resource.Subj ?? ''),
@@ -97,6 +114,7 @@ async function searchIguana(
       desc: String(resource.Desc ?? ''),
       url: r.FriendlyUrl ?? '',
       ean: typeof resource.Id === 'string' && resource.Id.startsWith('ean:') ? resource.Id.slice(4) : null,
+      thumbnail: coverMap[rscId] ? `/api/cover?url=${encodeURIComponent(coverMap[rscId])}` : undefined,
     }
   }).filter(r => r.title)
 

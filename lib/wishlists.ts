@@ -38,13 +38,35 @@ export type WishlistStore = {
 const STORAGE_KEY = 'mediatheques_wishlists_v2'
 
 export const DEFAULT_LISTS: WishlistDef[] = [
-  { id: 'ps5',    name: 'Jeux PS5',       icon: '🎮', docType: 'Jeu vidéo',   subject: 'PS5', queryExtra: '',        builtIn: true },
-  { id: 'ps4',    name: 'Jeux PS4',       icon: '🕹️', docType: 'Jeu vidéo',   subject: 'PS4', queryExtra: '',        builtIn: true },
-  { id: 'bluray', name: 'Films Blu-ray',  icon: '🎬', docType: 'Vidéo',       subject: '',    queryExtra: 'blu-ray', builtIn: true },
-  { id: 'films',  name: 'Films',          icon: '🎥', docType: 'Vidéo',       subject: '',    queryExtra: '',        builtIn: true },
-  { id: 'bd',     name: 'BD & Manga',     icon: '📚', docType: 'BD ou manga', subject: '',    queryExtra: '',        builtIn: true },
-  { id: 'livres', name: 'Livres',         icon: '📖', docType: 'Livre',       subject: '',    queryExtra: '',        builtIn: true },
+  { id: 'jeux',    name: 'Jeux',    icon: '🎮', docType: 'Jeu vidéo',   subject: '', queryExtra: '', builtIn: true },
+  { id: 'films',   name: 'Films',   icon: '🎬', docType: 'Vidéo',       subject: '', queryExtra: '', builtIn: true },
+  { id: 'bd',      name: 'BD',      icon: '📚', docType: 'BD ou manga', subject: '', queryExtra: '', builtIn: true },
+  { id: 'livres',  name: 'Livres',  icon: '📖', docType: 'Livre',       subject: '', queryExtra: '', builtIn: true },
+  { id: 'musique', name: 'Musique', icon: '🎵', docType: 'Musique',     subject: '', queryExtra: '', builtIn: true },
 ]
+
+const LIST_ID_MIGRATION: Record<string, string> = {
+  ps5: 'jeux',
+  ps4: 'jeux',
+  bluray: 'films',
+}
+
+function migrateItemListIds(items: WishlistItem[]): WishlistItem[] {
+  const seen = new Set<string>()
+  return items
+    .map(item => ({ ...item, listId: LIST_ID_MIGRATION[item.listId] ?? item.listId }))
+    .filter(item => {
+      const key = `${item.listId}:${item.title.toLowerCase()}`
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+}
+
+function migrateOrderedIds(ids: string[]): string[] {
+  const mapped = ids.map(id => LIST_ID_MIGRATION[id] ?? id)
+  return mapped.filter((id, i) => mapped.indexOf(id) === i)
+}
 
 type StoredPayload = {
   lists: WishlistDef[]           // custom lists only
@@ -77,10 +99,11 @@ export function loadStore(): WishlistStore {
 
     const merged = [...builtIns, ...customLists]
 
-    if (orderedIds.length > 0) {
+    const resolvedOrderedIds = migrateOrderedIds(orderedIds)
+    if (resolvedOrderedIds.length > 0) {
       merged.sort((a, b) => {
-        const ai = orderedIds.indexOf(a.id)
-        const bi = orderedIds.indexOf(b.id)
+        const ai = resolvedOrderedIds.indexOf(a.id)
+        const bi = resolvedOrderedIds.indexOf(b.id)
         if (ai === -1 && bi === -1) return 0
         if (ai === -1) return 1
         if (bi === -1) return -1
@@ -90,7 +113,7 @@ export function loadStore(): WishlistStore {
 
     return {
       lists: merged,
-      items: parsed.items ?? [],
+      items: migrateItemListIds(parsed.items ?? []),
       defaultLibrary: parsed.defaultLibrary ?? 'malraux_neudorf',
     }
   } catch {
@@ -222,11 +245,11 @@ export async function loadFromCloud(): Promise<WishlistStore | null> {
       })
     }
 
-    const items: WishlistItem[] = (p.items ?? []).map(ci => ({
+    const rawItems: WishlistItem[] = (p.items ?? []).map(ci => ({
       id: ci.id, listId: ci.listId, title: ci.title, addedAt: ci.addedAt,
       status: 'idle' as const, match: null, checkedAt: null, foundAt: null,
     }))
-    return { lists: merged, items, defaultLibrary: p.defaultLibrary ?? 'malraux_neudorf' }
+    return { lists: merged, items: migrateItemListIds(rawItems), defaultLibrary: p.defaultLibrary ?? 'malraux_neudorf' }
   } catch {
     return null
   }

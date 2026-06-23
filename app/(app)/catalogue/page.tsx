@@ -1,6 +1,8 @@
 'use client'
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import type { CatalogueItem } from '@/app/api/catalogue/search/route'
+import CoverImg from '@/components/CoverImg'
+import { ViewModeToggle, type ViewMode, TYPE_CONFIG, typeBadge } from '@/components/ViewModeToggle'
 import { loadStore, saveStore, addItem, addCustomList, libraryLabel, type LibraryKey } from '@/lib/wishlists'
 
 const LIST_ICONS = ['🎮', '🕹️', '🎬', '🎥', '📚', '📖', '🎵', '🎭', '⭐', '❤️', '🔖', '🎯']
@@ -96,6 +98,7 @@ export default function CataloguePage() {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
   const [showManagePresets, setShowManagePresets] = useState(false)
   const [presetsState, setPresetsState] = useState<PresetsState>({ hiddenIds: [], orderedIds: [] })
+  const [viewMode, setViewMode] = useState<ViewMode>('images')
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const cloudSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const cloudLoaded = useRef(false)
@@ -144,7 +147,6 @@ export default function CataloguePage() {
     })
   }
 
-  // Keep ref in sync for cloud saves
   useEffect(() => {
     cataloguePrefsRef.current = { presetsState, customPresets, library }
   }, [presetsState, customPresets, library])
@@ -161,7 +163,15 @@ export default function CataloguePage() {
     }, 200)
   }
 
-  // Load saved data — local first, then cloud
+  useEffect(() => {
+    const saved = localStorage.getItem('catalogue_view_mode') as ViewMode | null
+    if (saved) setViewMode(saved)
+  }, [])
+
+  useEffect(() => {
+    localStorage.setItem('catalogue_view_mode', viewMode)
+  }, [viewMode])
+
   useEffect(() => {
     const localPresetsState = loadPresetsState()
     const localCustomPresets = loadCustomPresets()
@@ -184,17 +194,14 @@ export default function CataloguePage() {
       .finally(() => { cloudLoaded.current = true })
   }, [])
 
-  // Debounce search input
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(() => setQuery(input), 350)
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
   }, [input])
 
-  // Reset page on filter change
   useEffect(() => { setPage(0); setResults([]) }, [preset, library])
 
-  // Fetch results
   useEffect(() => {
     const hasFilter = currentPreset.type || currentPreset.subject || currentPreset.query
     if (!query && !hasFilter) { setResults([]); setTotal(0); return }
@@ -273,14 +280,21 @@ export default function CataloguePage() {
   const hasMore = results.length < total && results.length > 0
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100%' }}>
-      {/* Header */}
-      <div style={{ background: 'var(--surface)', padding: '20px 18px 0', borderBottom: '1px solid var(--border)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-          <div style={{ fontSize: '26px', fontWeight: 800, color: 'var(--color-heading)', letterSpacing: '-0.5px', fontFamily: 'DM Sans, sans-serif' }}>
-            Catalogue
-          </div>
-          {/* Library selector */}
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+
+      {/* Lightweight header: title + library selector */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '16px 18px 14px',
+        background: 'var(--surface)',
+        borderBottom: '0.5px solid var(--border)',
+        flexShrink: 0,
+      }}>
+        <div style={{ fontSize: '22px', fontWeight: 800, color: 'var(--color-heading)', letterSpacing: '-0.5px', fontFamily: 'DM Sans, sans-serif' }}>
+          Catalogue
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <ViewModeToggle value={viewMode} onChange={setViewMode} />
           <select
             value={library}
             onChange={e => { setLibrary(e.target.value as LibraryKey); scheduleCloudSave() }}
@@ -301,36 +315,19 @@ export default function CataloguePage() {
             ))}
           </select>
         </div>
+      </div>
 
-        {/* Search input */}
-        <div style={{ position: 'relative', marginBottom: '14px' }}>
-          <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', fontSize: '14px', pointerEvents: 'none', opacity: 0.5 }}>
-            🔍
-          </span>
-          <input
-            type="search"
-            value={input}
-            onChange={e => setInput(e.target.value)}
-            placeholder="Titre, auteur, genre…"
-            style={{
-              width: '100%', padding: '10px 36px',
-              borderRadius: 'var(--radius-sm)',
-              border: '1.5px solid var(--border)',
-              fontSize: '14px',
-              background: 'var(--bg)', color: 'var(--text)',
-              fontFamily: 'DM Sans, sans-serif', outline: 'none',
-            }}
-          />
-          {input && (
-            <button onClick={() => { setInput(''); setQuery('') }}
-              style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px', color: 'var(--text-2)' }}>
-              ×
-            </button>
-          )}
-        </div>
-
-        {/* Filter presets — only visible */}
-        <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '14px', scrollbarWidth: 'none' }}>
+      {/* Top zone: filter pills + search */}
+      <div style={{
+        flexShrink: 0,
+        background: 'var(--surface)',
+        borderBottom: '0.5px solid var(--border)',
+      }}>
+        {/* Filter pills */}
+        <div
+          data-hscroll
+          style={{ display: 'flex', gap: '6px', overflowX: 'auto', padding: '10px 16px 0', scrollbarWidth: 'none' }}
+        >
           {orderedPresets.filter(p => !p.hidden).map(p => (
             <button
               key={p.id}
@@ -345,7 +342,7 @@ export default function CataloguePage() {
                 transition: 'background 0.12s, color 0.12s',
               }}
             >
-              {p.icon} {p.label}
+              {p.label}
             </button>
           ))}
           {(currentPreset.type || currentPreset.subject || currentPreset.query) && !currentPreset.custom && (
@@ -376,10 +373,47 @@ export default function CataloguePage() {
             ⚙
           </button>
         </div>
+
+        {/* Search input */}
+        <div style={{ position: 'relative', padding: '8px 16px 12px' }}>
+          <span style={{ position: 'absolute', left: '28px', top: '50%', transform: 'translateY(-50%)', fontSize: '14px', pointerEvents: 'none', opacity: 0.45 }}>
+            🔍
+          </span>
+          <input
+            type="search"
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            placeholder="Titre, auteur, genre…"
+            style={{
+              width: '100%', padding: '10px 44px 10px 36px',
+              borderRadius: 'var(--radius-sm)',
+              border: '1.5px solid var(--border)',
+              fontSize: '14px',
+              background: 'var(--bg)', color: 'var(--text)',
+              fontFamily: 'DM Sans, sans-serif', outline: 'none',
+              boxSizing: 'border-box',
+            }}
+          />
+          {input && (
+            <button
+              onClick={() => { setInput(''); setQuery('') }}
+              style={{
+                position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)',
+                background: 'none', border: 'none', cursor: 'pointer',
+                color: 'var(--text-2)',
+                width: '44px', height: '44px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '18px',
+              }}
+            >
+              ×
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Content */}
-      <div style={{ padding: '14px 16px', flex: 1 }}>
+      {/* Scrollable content */}
+      <div style={{ flex: 1, overflowY: 'auto', minHeight: 0, padding: '14px 16px' }}>
         {error && (
           <div style={{ fontSize: '12px', color: 'var(--text-2)', padding: '12px', background: 'var(--surface)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', fontFamily: 'DM Mono, monospace', marginBottom: '10px' }}>
             {error}
@@ -419,6 +453,7 @@ export default function CataloguePage() {
                   key={item.rscId}
                   item={item}
                   onAddToList={() => setShowAddModal(item)}
+                  viewMode={viewMode}
                 />
               ))}
             </div>
@@ -615,39 +650,92 @@ export default function CataloguePage() {
   )
 }
 
-function CatalogCard({ item, onAddToList }: { item: CatalogueItem; onAddToList: () => void }) {
-  const typeIcon: Record<string, string> = {
+function CatalogCard({ item, onAddToList, viewMode }: { item: CatalogueItem; onAddToList: () => void; viewMode: ViewMode }) {
+  const TYPE_ICON: Record<string, string> = {
     'Jeu vidéo': '🎮', 'Vidéo': '🎬', 'Livre': '📖',
     'BD ou manga': '📚', 'Musique': '🎵',
   }
-  const icon = typeIcon[item.type] ?? '📄'
+  const icon = TYPE_ICON[item.type] ?? '📄'
+
+  const [avail, setAvail] = useState<boolean | null | 'checking'>('checking')
+
+  useEffect(() => {
+    let cancelled = false
+    fetch(`/api/catalogue/holdings?rscId=${encodeURIComponent(item.rscId)}`)
+      .then(r => r.json())
+      .then((data: { available?: boolean | null }) => {
+        if (!cancelled) setAvail(data.available ?? null)
+      })
+      .catch(() => { if (!cancelled) setAvail(null) })
+    return () => { cancelled = true }
+  }, [item.rscId])
+
+  const dotColor = avail === true ? 'var(--green)'
+    : avail === false ? 'var(--orange)'
+    : 'var(--border)'
+
+  const typeConf = TYPE_CONFIG[item.type]
+  const badge = typeBadge(item.type, item.subject)
 
   return (
-    <div style={{
-      background: 'var(--surface)', borderRadius: 'var(--radius-sm)',
-      border: '1px solid var(--border)', padding: '12px 14px',
-      display: 'flex', gap: '12px', alignItems: 'flex-start',
-    }}>
-      <div style={{
-        width: '40px', height: '40px', borderRadius: '8px',
-        background: 'var(--tab-inactive-bg)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: '20px', flexShrink: 0,
-      }}>
-        {icon}
-      </div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: '13.5px', fontWeight: 700, color: 'var(--color-heading)', lineHeight: 1.3, marginBottom: '3px' }}>
-          {item.title}
+    <div
+      onClick={() => item.url && window.open(item.url, '_blank', 'noopener,noreferrer')}
+      style={{
+        background: 'var(--surface)', borderRadius: 'var(--radius-sm)',
+        border: '1px solid var(--border)',
+        display: 'flex', alignItems: 'center',
+        cursor: item.url ? 'pointer' : 'default',
+        overflow: 'hidden',
+      }}
+    >
+      {/* Vignette — images or icons mode */}
+      {viewMode === 'images' && (
+        <CoverImg thumbnail={item.thumbnail} width={44} height={63} typeIcon={icon} subject={item.subject} borderRadius={0} />
+      )}
+      {viewMode === 'icons' && (
+        <div style={{
+          width: 44, height: 63, flexShrink: 0,
+          background: typeConf?.bg ?? 'var(--tab-inactive-bg)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 22,
+        }}>
+          {typeConf?.emoji ?? icon}
         </div>
-        <div style={{ fontSize: '11px', color: 'var(--text-2)', display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: item.desc ? '4px' : 0 }}>
-          {item.subject && (
-            <span style={{ background: 'var(--tab-inactive-bg)', padding: '1px 7px', borderRadius: '10px', fontWeight: 500 }}>
-              {item.subject}
+      )}
+
+      {/* Content */}
+      <div style={{ flex: 1, minWidth: 0, padding: '10px 12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '3px' }}>
+          <div style={{
+            width: '7px', height: '7px', borderRadius: '50%', flexShrink: 0,
+            background: dotColor,
+            animation: avail === 'checking' ? 'pulse 1s infinite' : 'none',
+          }} />
+          <div style={{ fontSize: '13.5px', fontWeight: 700, color: 'var(--color-heading)', lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0 }}>
+            {item.title}
+          </div>
+          {viewMode === 'badges' && badge && (
+            <span style={{
+              fontSize: '9px', fontWeight: 700, padding: '2px 6px',
+              borderRadius: '20px', background: 'var(--tab-inactive-bg)',
+              color: 'var(--text-2)', whiteSpace: 'nowrap', flexShrink: 0,
+            }}>
+              {badge}
             </span>
           )}
-          {item.publisher && <span>{item.publisher}</span>}
-          {item.year && <span>{item.year}</span>}
+        </div>
+        <div style={{ display: 'flex', gap: '5px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '2px' }}>
+          {item.type && viewMode !== 'badges' && (
+            <span style={{
+              fontSize: '9px', fontWeight: 700, padding: '2px 6px',
+              borderRadius: '20px', background: 'var(--tab-inactive-bg)',
+              color: 'var(--text-2)', whiteSpace: 'nowrap', flexShrink: 0,
+            }}>
+              {item.type}
+            </span>
+          )}
+          {item.publisher && <span style={{ fontSize: '11px', color: 'var(--text-2)' }}>{item.publisher}</span>}
+          {item.year && <span style={{ fontSize: '11px', color: 'var(--text-2)' }}>{item.year}</span>}
         </div>
         {item.desc && (
           <div style={{ fontSize: '11px', color: 'var(--text-2)', lineHeight: 1.5, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const }}>
@@ -655,9 +743,11 @@ function CatalogCard({ item, onAddToList }: { item: CatalogueItem; onAddToList: 
           </div>
         )}
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flexShrink: 0, alignItems: 'flex-end' }}>
+
+      {/* + Liste button */}
+      <div style={{ flexShrink: 0, padding: '0 12px', display: 'flex', alignItems: 'center' }}>
         <button
-          onClick={onAddToList}
+          onClick={e => { e.stopPropagation(); onAddToList() }}
           style={{
             background: 'var(--navy)', color: 'white',
             border: 'none', borderRadius: '20px',
@@ -668,19 +758,6 @@ function CatalogCard({ item, onAddToList }: { item: CatalogueItem; onAddToList: 
         >
           + Liste
         </button>
-        {item.url && (
-          <a href={item.url} target="_blank" rel="noopener noreferrer"
-            style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              padding: '8px 14px', minHeight: '36px', borderRadius: '20px',
-              background: 'var(--tab-inactive-bg)',
-              fontSize: '12px', fontWeight: 700, color: 'var(--text-2)',
-              textDecoration: 'none', whiteSpace: 'nowrap',
-              fontFamily: 'DM Sans, sans-serif',
-            }}>
-            →
-          </a>
-        )}
       </div>
     </div>
   )
@@ -721,7 +798,6 @@ function AddToListModal({ item, onAdd, onClose }: {
           {item.title}
         </div>
 
-        {/* Existing lists */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
           {store.lists.map(list => (
             <button
@@ -740,7 +816,6 @@ function AddToListModal({ item, onAdd, onClose }: {
           ))}
         </div>
 
-        {/* Create new list — inline */}
         {!creating ? (
           <button
             onClick={() => setCreating(true)}
@@ -758,7 +833,6 @@ function AddToListModal({ item, onAdd, onClose }: {
             <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-heading)', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
               Nouvelle liste
             </div>
-            {/* Icon picker */}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>
               {LIST_ICONS.map(ic => (
                 <button

@@ -24,7 +24,7 @@ function useFoundCount(): number {
 }
 
 const TABS = [
-  { href: '/compte',    label: 'Compte',    Icon: User,     badge: false },
+  { href: '/compte',    label: 'Prêts',     Icon: User,     badge: false },
   { href: '/catalogue', label: 'Catalogue', Icon: Search,   badge: false },
   { href: '/envies',    label: 'Listes',    Icon: Bookmark, badge: true  },
 ]
@@ -40,18 +40,30 @@ export default function NavBottom() {
     let startX = 0
     let startY = 0
     let startedInSwipeable = false
+    let startedInHScroll = false
+    let startedWithPanelOpen = false
 
     function onTouchStart(e: TouchEvent) {
       startX = e.touches[0].clientX
       startY = e.touches[0].clientY
-      startedInSwipeable = !!(e.target as HTMLElement).closest?.('[data-swipeable]')
+      const target = e.target as HTMLElement
+      // Pills / horizontal scroll zones — never intercept
+      startedInHScroll = !!target.closest?.('[data-hscroll]')
+      // Swipeable item cards
+      const swipeableEl = target.closest?.('[data-swipeable]')
+      startedInSwipeable = !!swipeableEl
+      startedWithPanelOpen = swipeableEl?.getAttribute('data-panel-open') === 'true'
     }
 
     function onTouchEnd(e: TouchEvent) {
-      if (startedInSwipeable) return
+      // Never intercept touches that started in a horizontal scroll zone
+      if (startedInHScroll) return
       const dx = e.changedTouches[0].clientX - startX
       const dy = Math.abs(e.changedTouches[0].clientY - startY)
       if (Math.abs(dx) < 55 || dy > 60) return
+      // Block left swipe from item cards (opening delete panel)
+      // Block any swipe from item cards when the panel was already open (close panel first)
+      if (startedInSwipeable && (dx < 0 || startedWithPanelOpen)) return
       const idx = TAB_HREFS.findIndex(h => path.startsWith(h))
       if (idx === -1) return
       if (dx < 0 && idx < TAB_HREFS.length - 1) router.push(TAB_HREFS[idx + 1])
@@ -78,15 +90,10 @@ export default function NavBottom() {
       zIndex: 100,
     }}>
       {/* Swipe position dots */}
-      <div style={{
-        display: 'flex', justifyContent: 'center', gap: '5px',
-        paddingTop: '6px',
-      }}>
+      <div style={{ display: 'flex', justifyContent: 'center', gap: '5px', paddingTop: '6px' }}>
         {TABS.map((_, i) => (
           <div key={i} style={{
-            height: '3px',
-            width: '16px',
-            borderRadius: '2px',
+            height: '3px', width: '16px', borderRadius: '2px',
             background: i === activeIdx ? 'var(--color-heading)' : 'var(--border)',
             transform: i === activeIdx ? 'scaleX(1)' : 'scaleX(0.31)',
             transformOrigin: 'center',
@@ -96,10 +103,7 @@ export default function NavBottom() {
       </div>
 
       {/* Tab items */}
-      <div style={{
-        display: 'flex', justifyContent: 'space-around', alignItems: 'center',
-        height: '52px',
-      }}>
+      <div style={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center', height: '52px' }}>
         {TABS.map(({ href, label, Icon, badge }) => {
           const active = path.startsWith(href)
           const showBadge = badge && foundCount > 0

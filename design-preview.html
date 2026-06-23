@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Preview — Médiathèques redesign</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy: #0D1B2A;
+  --orange: #F97316;
+  --green: #22C55E;
+  --red: #EF4444;
+  --bg: #F6F7F9;
+  --surface: #FFFFFF;
+  --border: #EDEEF1;
+  --text: #1A2535;
+  --text-2: #637080;
+  --heading: #0D1B2A;
+  --inactive: #EDEEF0;
+  --content-bg: #E4E6EA;
+  --neudorf: #0891B2;
+  --nav-bg: rgba(255,255,255,0.88);
+  --rs: 8px;
+  --rl: 16px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',system-ui,sans-serif;background:#E8EAED;color:var(--text);padding:40px 20px 80px;-webkit-font-smoothing:antialiased}
+
+/* PAGE LAYOUT */
+.page-title{font-size:26px;font-weight:800;color:var(--navy);letter-spacing:-.5px;margin-bottom:4px}
+.page-sub{font-size:13px;color:var(--text-2);margin-bottom:48px;line-height:1.6;max-width:700px}
+.section{margin-bottom:72px}
+.section-head{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text-2);margin-bottom:20px;font-family:'DM Mono',monospace}
+.row{display:flex;gap:28px;align-items:flex-start;overflow-x:auto;padding-bottom:4px}
+.col{flex-shrink:0}
+.phone-label{text-align:center;font-size:11.5px;font-weight:700;color:var(--text-2);margin-top:14px;letter-spacing:.02em}
+
+/* PHONE FRAME */
+.phone{width:375px;background:var(--bg);border-radius:46px;overflow:hidden;box-shadow:0 0 0 10px #1A1A1A,0 0 0 11px #3A3A3A,0 32px 80px rgba(0,0,0,.28);position:relative;flex-shrink:0}
+.di{width:118px;height:34px;background:#0D0D0D;border-radius:20px;margin:12px auto 0;display:flex;align-items:center;justify-content:center;gap:8px}
+.di-cam{width:12px;height:12px;background:#1a1a1a;border-radius:50%;border:2px solid #333;box-shadow:inset 0 0 0 2px #1a1a1a}
+.screen{height:730px;overflow:hidden;position:relative;display:flex;flex-direction:column;background:var(--bg)}
+
+/* HEADER */
+.hdr{background:var(--surface);padding:18px 18px 0;border-bottom:1px solid var(--border);flex-shrink:0}
+.hdr-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.hdr-title{font-size:26px;font-weight:800;color:var(--heading);letter-spacing:-.5px}
+.lib-chip{font-size:10.5px;font-weight:600;padding:5px 10px;border-radius:20px;border:1.5px solid var(--border);background:var(--inactive);color:var(--text-2);white-space:nowrap}
+
+/* SEARCH */
+.srch{position:relative;margin-bottom:14px}
+.srch-in{width:100%;padding:10px 46px 10px 36px;border-radius:var(--rs);border:1.5px solid var(--border);font-size:14px;font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text)}
+.srch-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-2);opacity:.45;pointer-events:none}
+/* Grande croix 44×44 */
+.srch-clear{position:absolute;right:0;top:50%;transform:translateY(-50%);width:44px;height:44px;display:flex;align-items:center;justify-content:center;background:none;border:none;cursor:pointer;color:var(--text-2)}
+
+/* PILLS sans emojis */
+.pills{display:flex;gap:6px;overflow-x:auto;padding-bottom:14px;scrollbar-width:none}
+.pills::-webkit-scrollbar{display:none}
+.pill{flex-shrink:0;font-size:11px;font-weight:600;padding:6px 14px;border-radius:20px;border:none;cursor:pointer;white-space:nowrap;background:var(--inactive);color:var(--text-2);font-family:'DM Sans',sans-serif}
+.pill.on{background:var(--navy);color:#fff}
+.pill-icon{flex-shrink:0;width:32px;height:32px;border-radius:20px;border:1.5px solid var(--border);background:transparent;display:flex;align-items:center;justify-content:center;color:var(--text-2);font-size:13px;cursor:pointer}
+
+/* SUB TABS (Compte) */
+.tabs{display:flex;gap:6px;margin-bottom:14px}
+
+/* CONTENT */
+.cnt{flex:1;overflow-y:auto;padding:14px 16px;background:var(--content-bg)}
+.cnt::-webkit-scrollbar{display:none}
+.grp{background:var(--surface);border-radius:12px;overflow:hidden;margin-bottom:12px}
+.grp>*+*{border-top:.5px solid var(--border)}
+
+/* STAT META */
+.stat-line{font-size:10px;color:var(--text-2);font-family:'DM Mono',monospace;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center}
+.check-btn{font-size:10.5px;font-weight:600;padding:5px 14px;background:var(--inactive);border:none;border-radius:20px;color:var(--text-2);cursor:pointer;font-family:'DM Sans',sans-serif}
+
+/* BOOKING CARD */
+.bk{display:flex;align-items:center;gap:12px;padding:12px;cursor:pointer}
+.thumb{width:44px;height:63px;border-radius:6px;background:var(--inactive);flex-shrink:0;display:flex;align-items:center;justify-content:center;overflow:hidden;font-size:22px}
+.thumb img{width:100%;height:100%;object-fit:cover}
+.bk-info{flex:1;min-width:0}
+.bk-title{font-size:13px;font-weight:700;color:var(--heading);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.2px}
+.bk-meta{font-size:10px;color:var(--text-2);margin-top:2px}
+.loc-n{color:var(--neudorf);font-weight:600}
+.bk-badge{margin-top:7px}
+
+/* STATUS BADGE */
+.badge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:6px;font-size:10.5px;font-weight:700}
+.badge.g{background:rgba(34,197,94,.1);color:#15803d}
+.badge.o{background:rgba(249,115,22,.1);color:#c2410c}
+.badge.gr{background:var(--inactive);color:var(--text-2)}
+.badge.r{background:rgba(239,68,68,.1);color:#b91c1c}
+.dot6{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.g .dot6{background:#22C55E}
+.o .dot6{background:#F97316}
+.gr .dot6{background:#9CA3AF}
+.r .dot6{background:#EF4444}
+
+/* CATALOG CARD — thumbnail + format badge + dispo dot */
+.cc{background:var(--surface);border-radius:var(--rs);border:1px solid var(--border);padding:12px 14px;display:flex;gap:12px;align-items:flex-start;margin-bottom:8px;cursor:pointer}
+.cc-mid{flex:1;min-width:0}
+.cc-title{font-size:13.5px;font-weight:700;color:var(--heading);line-height:1.3;margin-bottom:5px}
+.cc-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:4px}
+.fmt{font-size:10px;font-weight:600;padding:2px 7px;border-radius:5px;background:#EEF2F8;color:#4B6080;white-space:nowrap}
+.d7{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.d7.g{background:#22C55E}
+.d7.o{background:#F97316}
+.d7.gr{background:#D1D5DB}
+.cc-sub{font-size:11px;color:var(--text-2)}
+.cc-sub .n{color:var(--neudorf);font-weight:600}
+.cc-right{display:flex;flex-direction:column;gap:6px;align-items:flex-end;flex-shrink:0;padding-top:2px}
+.btn-add{background:var(--navy);color:#fff;border:none;border-radius:20px;padding:7px 13px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:'DM Sans',sans-serif;min-height:32px}
+
+/* WISHLIST ITEM — avec thumb */
+.wi{padding:10px 14px;display:flex;align-items:center;gap:10px;background:var(--surface);cursor:pointer}
+.wi-thumb{width:36px;height:52px;border-radius:5px;background:var(--inactive);flex-shrink:0;display:flex;align-items:center;justify-content:center;overflow:hidden;font-size:17px}
+/* Point centré — le parent a alignItems:center donc le dot est centré */
+.d7b{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.d7b.g{background:#22C55E}
+.d7b.o{background:#F97316}
+.d7b.gr{background:#D1D5DB}
+.wi-info{flex:1;min-width:0}
+.wi-title{font-size:13px;font-weight:600;color:var(--heading);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wi-sub{font-size:11px;margin-top:2px;color:var(--text-2)}
+.wi-sub.g{color:#15803d;font-weight:500}
+.wi-sub.n{color:var(--neudorf);font-weight:500}
+
+/* SECTION LABEL in Listes */
+.sec-lbl{font-size:10px;font-weight:700;color:var(--text-2);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px;font-family:'DM Mono',monospace;padding-left:2px}
+.sec-blk{margin-bottom:14px}
+
+/* NAV */
+.nav{position:absolute;bottom:0;left:0;right:0;background:var(--nav-bg);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:.5px solid var(--border);z-index:10}
+.nav-dots{display:flex;justify-content:center;gap:5px;padding-top:6px}
+.nd{height:3px;border-radius:2px;background:var(--border);width:5px;transition:all .22s}
+.nd.on{background:var(--heading);width:16px}
+.nav-items{display:flex;justify-content:space-around;height:52px;align-items:center}
+.ni{display:flex;flex-direction:column;align-items:center;gap:2px;flex:1;padding:4px 0}
+.ni-label{font-size:9px;font-weight:500;color:var(--text-2);font-family:'DM Sans',sans-serif}
+.ni-label.on{font-weight:800;color:var(--heading)}
+.safe{height:20px}
+
+/* NAV FULL BOTTOM — recherche + pills au-dessus de la nav */
+.bot-zone{background:var(--nav-bg);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:.5px solid var(--border)}
+.bot-pills{display:flex;gap:6px;padding:10px 14px 8px;overflow-x:auto;scrollbar-width:none}
+.bot-srch{padding:0 14px 10px}
+.bot-srch .srch{margin-bottom:0}
+.hdr-lite{background:var(--surface);padding:16px 18px 14px;border-bottom:1px solid var(--border);flex-shrink:0}
+
+/* ANNOTATIONS */
+.ann{position:relative}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:6px;font-size:10px;font-weight:700;white-space:nowrap}
+.chip.new{background:#DCFCE7;color:#166534}
+.chip.chg{background:#EDE9FE;color:#5B21B6}
+
+/* CHANGE LOG */
+.cl-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;margin-top:16px}
+.cl-card{background:var(--surface);border-radius:12px;padding:16px;border:1px solid var(--border)}
+.cl-num{font-size:10px;font-weight:700;color:var(--text-2);font-family:'DM Mono',monospace;margin-bottom:4px}
+.cl-title{font-size:13.5px;font-weight:700;color:var(--navy);margin-bottom:4px}
+.cl-desc{font-size:12px;color:var(--text-2);line-height:1.55}
+.tag{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;margin-bottom:8px}
+.tag.q{background:#DCFCE7;color:#15803D}
+.tag.v{background:#EDE9FE;color:#6D28D9}
+.tag.s{background:#FEF3C7;color:#92400E}
+
+/* HR */
+hr{border:none;border-top:1px solid var(--border);margin:48px 0}
+
+/* SVG icons inline */
+svg{display:block}
+</style>
+</head>
+<body>
+
+<div class="page-title">Médiathèques — Preview redesign</div>
+<p class="page-sub">
+  Mockups interactifs de l'ensemble des modifications proposées.<br>
+  Valide chaque section avant implémentation. Les annotations en <span style="background:#DCFCE7;color:#166534;padding:1px 6px;border-radius:4px;font-size:11px;font-weight:700">NOUVEAU</span> signalent les changements.
+</p>
+
+<!-- ============================================================
+     SECTION 1 : VUE D'ENSEMBLE — 3 ONGLETS
+============================================================ -->
+<div class="section">
+  <div class="section-head">Vue d'ensemble · les 3 onglets redesignés</div>
+  <div class="row">
+
+    <!-- PHONE 1 : EMPRUNTS (ex-Compte) -->
+    <div class="col">
+      <div class="phone">
+        <div class="di"><div class="di-cam"></div></div>
+        <div class="screen">
+          <!-- Header -->
+          <div class="hdr">
+            <div class="hdr-row">
+              <div class="hdr-title">Bonjour Paul</div>
+            </div>
+            <div class="tabs">
+              <button class="pill on">Réservations (3)</button>
+              <button class="pill">Prêts (2)</button>
+            </div>
+          </div>
+          <!-- Content -->
+          <div class="cnt">
+            <div class="grp">
+              <!-- Réservation 1 — Malraux, neutre -->
+              <div class="bk">
+                <div class="thumb" style="background:#E0E7F4;font-size:13px;color:#4B6080">🎮</div>
+                <div class="bk-info">
+                  <div class="bk-title">Astro Bot</div>
+                  <div class="bk-meta">Jeu vidéo · Malraux</div>
+                  <div class="bk-badge"><span class="badge g"><span class="dot6"></span>À récupérer</span></div>
+                  <div style="font-size:10px;color:#15803d;font-weight:500;margin-top:4px">Jusqu'au 28 juin</div>
+                </div>
+              </div>
+              <!-- Réservation 2 — NEUDORF en couleur -->
+              <div class="bk">
+                <div class="thumb" style="background:#FFEDD5;font-size:22px">🎬</div>
+                <div class="bk-info">
+                  <div class="bk-title">Perfect Days</div>
+                  <!-- Neudorf mis en avant -->
+                  <div class="bk-meta">Vidéo · <span class="loc-n">Neudorf</span></div>
+                  <div class="bk-badge"><span class="badge g"><span class="dot6"></span>À récupérer</span></div>
+                  <div style="font-size:10px;color:#15803d;font-weight:500;margin-top:4px">Jusqu'au 2 juil</div>
+                </div>
+              </div>
+              <!-- Réservation 3 -->
+              <div class="bk">
+                <div class="thumb" style="background:#E0E7F4;font-size:22px">🎬</div>
+                <div class="bk-info">
+                  <div class="bk-title">Alien : Romulus</div>
+                  <div class="bk-meta">Vidéo · Malraux</div>
+                  <div class="bk-badge"><span class="badge gr"><span class="dot6"></span>Rang 3</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- Nav -->
+          <div class="nav">
+            <div class="nav-dots"><div class="nd on"></div><div class="nd"></div><div class="nd"></div></div>
+            <div class="nav-items">
+              <div class="ni">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0D1B2A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                <span class="ni-label on">Prêts</span>
+              </div>
+              <div class="ni">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#637080" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                <span class="ni-label">Catalogue</span>
+              </div>
+              <div class="ni">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#637080" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+                <span class="ni-label">Listes</span>
+              </div>
+            </div>
+            <div class="safe"></div>
+          </div>
+        </div>
+      </div>
+      <div class="phone-label">Prêts <span style="opacity:.5;font-weight:400">(ex-Compte)</span></div>
+    </div>
+
+    <!-- PHONE 2 : CATALOGUE -->
+    <div class="col">
+      <div class="phone">
+        <div class="di"><div class="di-cam"></div></div>
+        <div class="screen">
+          <!-- Header -->
+          <div class="hdr">
+            <div class="hdr-row">
+              <div class="hdr-title">Catalogue</div>
+              <div class="lib-chip">Malraux + Neudorf</div>
+            </div>
+            <!-- Champ avec grande croix -->
+            <div class="srch">
+              <span class="srch-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+              </span>
+              <input class="srch-in" type="text" value="spider-man">
+              <!-- Grande croix 44×44 -->
+              <button class="srch-clear">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+            <!-- Pills SANS emojis -->
+            <div class="pills">
+              <button class="pill">Tout</button>
+              <button class="pill on">PS5</button>
+              <button class="pill">PS4</button>
+              <button class="pill">Switch</button>
+              <button class="pill">Blu-ray</button>
+              <button class="pill">Films</button>
+              <button class="pill">BD</button>
+              <button class="pill">Livres</button>
+              <div class="pill-icon">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+              </div>
+            </div>
+          </div>
+          <!-- Content -->
+          <div class="cnt" style="padding-top:12px">
+            <div style="font-size:10px;color:var(--text-2);font-family:'DM Mono',monospace;margin-bottom:10px">4 résultats · Malraux + Neudorf</div>
+
+            <!-- Card 1 — dispo vert, Malraux -->
+            <div class="cc">
+              <div class="thumb" style="background:#E0E7F4;font-size:22px">🎮</div>
+              <div class="cc-mid">
+                <div class="cc-title">Spider-Man 2</div>
+                <div class="cc-row">
+                  <span class="fmt">PS5</span>
+                  <span class="d7 g"></span>
+                  <span style="font-size:11px;color:#15803d;font-weight:500">Disponible</span>
+                </div>
+                <div class="cc-sub">Sony · 2023</div>
+                <div class="cc-sub">Malraux</div>
+              </div>
+              <div class="cc-right">
+                <button class="btn-add">+ Liste</button>
+              </div>
+            </div>
+
+            <!-- Card 2 — emprunté, Neudorf en couleur -->
+            <div class="cc">
+              <div class="thumb" style="background:#E0E7F4;font-size:22px">🎮</div>
+              <div class="cc-mid">
+                <div class="cc-title">Spider-Man : Miles Morales</div>
+                <div class="cc-row">
+                  <span class="fmt">PS5</span>
+                  <span class="d7 o"></span>
+                  <span style="font-size:11px;color:#c2410c;font-weight:500">Emprunté</span>
+                </div>
+                <div class="cc-sub">Sony · 2020</div>
+                <!-- Neudorf en couleur -->
+                <div class="cc-sub"><span class="n">Neudorf</span></div>
+              </div>
+              <div class="cc-right">
+                <button class="btn-add">+ Liste</button>
+              </div>
+            </div>
+
+            <!-- Card 3 — PS4 -->
+            <div class="cc">
+              <div class="thumb" style="background:#E0E7F4;font-size:22px">🎮</div>
+              <div class="cc-mid">
+                <div class="cc-title">Marvel's Spider-Man</div>
+                <div class="cc-row">
+                  <span class="fmt">PS4</span>
+                  <span class="d7 g"></span>
+                  <span style="font-size:11px;color:#15803d;font-weight:500">Disponible</span>
+                </div>
+                <div class="cc-sub">Sony · 2018</div>
+                <div class="cc-sub">Malraux</div>
+              </div>
+              <div class="cc-right">
+                <button class="btn-add">+ Liste</button>
+              </div>
+            </div>
+          </div>
+          <!-- Nav -->
+          <div class="nav">
+            <div class="nav-dots"><div class="nd"></div><div class="nd on"></div><div class="nd"></div></div>
+            <div class="nav-items">
+              <div class="ni">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#637080" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                <span class="ni-label">Prêts</span>
+              </div>
+              <div class="ni">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0D1B2A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                <span class="ni-label on">Catalogue</span>
+              </div>
+              <div class="ni">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#637080" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+                <span class="ni-label">Listes</span>
+              </div>
+            </div>
+            <div class="safe"></div>
+          </div>
+        </div>
+      </div>
+      <div class="phone-label">Catalogue</div>
+    </div>
+
+    <!-- PHONE 3 : LISTES -->
+    <div class="col">
+      <div class="phone">
+        <div class="di"><div class="di-cam"></div></div>
+        <div class="screen">
+          <!-- Header -->
+          <div class="hdr">
+            <div class="hdr-row">
+              <div class="hdr-title">Mes listes</div>
+              <div class="lib-chip">Malraux + Neudorf</div>
+            </div>
+            <!-- Champ recherche avec grande croix -->
+            <div class="srch">
+              <span class="srch-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+              </span>
+              <input class="srch-in" type="text" placeholder="Rechercher ou ajouter…">
+              <button class="srch-clear">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+            <!-- Pills listes SANS emojis -->
+            <div class="pills">
+              <button class="pill on">PS5 <span style="opacity:.55">4</span></button>
+              <button class="pill">PS4 <span style="opacity:.55">2</span></button>
+              <button class="pill">Switch <span style="opacity:.55">1</span></button>
+              <button class="pill">Films <span style="opacity:.55">7</span></button>
+              <button class="pill">BD <span style="opacity:.55">3</span></button>
+              <button class="pill" style="border:1.5px dashed var(--border);background:transparent">+ Nouvelle</button>
+              <div class="pill-icon">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+              </div>
+            </div>
+          </div>
+          <!-- Content -->
+          <div class="cnt">
+            <div class="stat-line">
+              <span>2 disponibles · 1 emprunté · 4 titres</span>
+              <button class="check-btn">↻ Tout vérifier</button>
+            </div>
+
+            <!-- Section Disponible -->
+            <div class="sec-blk">
+              <div class="sec-lbl">Disponible <span style="color:var(--green)">· 2</span></div>
+              <div class="grp">
+                <!-- Item avec thumb — point CENTRÉ verticalement -->
+                <div class="wi">
+                  <div class="wi-thumb" style="background:#dbe8f5;font-size:17px">🎮</div>
+                  <div class="d7b g"></div>
+                  <div class="wi-info">
+                    <div class="wi-title">Astro Bot</div>
+                    <div class="wi-sub g">André Malraux</div>
+                  </div>
+                </div>
+                <div class="wi">
+                  <div class="wi-thumb" style="background:#dbe8f5;font-size:17px">🎮</div>
+                  <div class="d7b g"></div>
+                  <div class="wi-info">
+                    <div class="wi-title">Spider-Man 2</div>
+                    <!-- Neudorf en bleu -->
+                    <div class="wi-sub n">Neudorf</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Section Emprunté -->
+            <div class="sec-blk">
+              <div class="sec-lbl">Emprunté <span style="color:var(--orange)">· 1</span></div>
+              <div class="grp">
+                <div class="wi">
+                  <div class="wi-thumb" style="background:#dbe8f5;font-size:17px">🎮</div>
+                  <div class="d7b o"></div>
+                  <div class="wi-info">
+                    <div class="wi-title">Silent Hill 2 Remake</div>
+                    <div class="wi-sub" style="color:#c2410c">Malraux · retour 22 juin</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Section En attente -->
+            <div class="sec-blk">
+              <div class="sec-lbl">En attente <span style="color:var(--border)">· 1</span></div>
+              <div class="grp">
+                <!-- Placeholder gris + icône -->
+                <div class="wi">
+                  <div class="wi-thumb" style="background:var(--inactive)">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+                  </div>
+                  <div class="d7b gr"></div>
+                  <div class="wi-info">
+                    <div class="wi-title">Final Fantasy VII Rebirth</div>
+                    <div class="wi-sub">Non vérifié</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- Nav -->
+          <div class="nav">
+            <div class="nav-dots"><div class="nd"></div><div class="nd"></div><div class="nd on"></div></div>
+            <div class="nav-items">
+              <div class="ni">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#637080" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                <span class="ni-label">Prêts</span>
+              </div>
+              <div class="ni">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#637080" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                <span class="ni-label">Catalogue</span>
+              </div>
+              <div class="ni">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0D1B2A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+                <span class="ni-label on">Listes</span>
+              </div>
+            </div>
+            <div class="safe"></div>
+          </div>
+        </div>
+      </div>
+      <div class="phone-label">Listes</div>
+    </div>
+
+  </div><!-- /row -->
+</div><!-- /section 1 -->
+
+<hr>
+
+<!-- ============================================================
+     SECTION 2 : NAVIGATION EN BAS — FULL iOS
+============================================================ -->
+<div class="section">
+  <div class="section-head">Navigation full iOS · recherche &amp; filtres en bas</div>
+  <p style="font-size:13px;color:var(--text-2);max-width:600px;line-height:1.6;margin-bottom:28px">
+    Recherche et pills descendent juste au-dessus de la nav principale. Le contenu occupe tout l'écran.
+    Titre + sélecteur médiathèque restent en haut (infos, pas d'interaction fréquente).<br>
+    <strong style="color:var(--navy)">Point d'attention :</strong> le clavier iOS pousse le contenu vers le haut — le champ reste accessible. À tester sur device réel.
+  </p>
+  <div class="row">
+
+    <!-- Avant -->
+    <div class="col">
+      <div class="phone">
+        <div class="di"><div class="di-cam"></div></div>
+        <div class="screen">
+          <div class="hdr">
+            <div class="hdr-row">
+              <div class="hdr-title">Catalogue</div>
+              <div class="lib-chip">Malraux + Neudorf</div>
+            </div>
+            <div class="srch">
+              <span class="srch-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg></span>
+              <input class="srch-in" type="text" value="spider-man">
+            </div>
+            <div class="pills">
+              <button class="pill">Tout</button>
+              <button class="pill on">PS5</button>
+              <button class="pill">PS4</button>
+              <button class="pill">Films</button>
+              <button class="pill">BD</button>
+            </div>
+          </div>
+          <div class="cnt" style="padding-top:12px">
+            <div style="font-size:10px;color:var(--text-2);font-family:'DM Mono',monospace;margin-bottom:10px">4 résultats</div>
+            <div class="cc">
+              <div class="thumb" style="background:#E0E7F4;font-size:22px">🎮</div>
+              <div class="cc-mid"><div class="cc-title">Spider-Man 2</div><div class="cc-row"><span class="fmt">PS5</span><span class="d7 g"></span><span style="font-size:11px;color:#15803d;font-weight:500">Disponible</span></div><div class="cc-sub">Malraux</div></div>
+              <div class="cc-right"><button class="btn-add">+ Liste</button></div>
+            </div>
+            <div class="cc">
+              <div class="thumb" style="background:#E0E7F4;font-size:22px">🎮</div>
+              <div class="cc-mid"><div class="cc-title">Spider-Man : Miles Morales</div><div class="cc-row"><span class="fmt">PS5</span><span class="d7 o"></span><span style="font-size:11px;color:#c2410c;font-weight:500">Emprunté</span></div><div class="cc-sub"><span class="n">Neudorf</span></div></div>
+              <div class="cc-right"><button class="btn-add">+ Liste</button></div>
+            </div>
+          </div>
+          <div class="nav">
+            <div class="nav-dots"><div class="nd"></div><div class="nd on"></div><div class="nd"></div></div>
+            <div class="nav-items">
+              <div class="ni"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#637080" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><span class="ni-label">Prêts</span></div>
+              <div class="ni"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0D1B2A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><span class="ni-label on">Catalogue</span></div>
+              <div class="ni"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#637080" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg><span class="ni-label">Listes</span></div>
+            </div>
+            <div class="safe"></div>
+          </div>
+        </div>
+      </div>
+      <div class="phone-label" style="color:#EF4444">Avant — filtres en haut</div>
+    </div>
+
+    <!-- Après — Full iOS -->
+    <div class="col">
+      <div class="phone">
+        <div class="di"><div class="di-cam"></div></div>
+        <div class="screen">
+          <!-- Header léger : juste titre + sélecteur -->
+          <div class="hdr-lite">
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <div style="font-size:26px;font-weight:800;color:var(--heading);letter-spacing:-.5px">Catalogue</div>
+              <div class="lib-chip">Malraux + Neudorf</div>
+            </div>
+          </div>
+
+          <!-- Contenu — prend toute la place disponible -->
+          <div class="cnt" style="padding-top:12px">
+            <div style="font-size:10px;color:var(--text-2);font-family:'DM Mono',monospace;margin-bottom:10px">4 résultats · Malraux + Neudorf</div>
+            <div class="cc">
+              <div class="thumb" style="background:#E0E7F4;font-size:22px">🎮</div>
+              <div class="cc-mid"><div class="cc-title">Spider-Man 2</div><div class="cc-row"><span class="fmt">PS5</span><span class="d7 g"></span><span style="font-size:11px;color:#15803d;font-weight:500">Disponible</span></div><div class="cc-sub">Malraux</div></div>
+              <div class="cc-right"><button class="btn-add">+ Liste</button></div>
+            </div>
+            <div class="cc">
+              <div class="thumb" style="background:#E0E7F4;font-size:22px">🎮</div>
+              <div class="cc-mid"><div class="cc-title">Spider-Man : Miles Morales</div><div class="cc-row"><span class="fmt">PS5</span><span class="d7 o"></span><span style="font-size:11px;color:#c2410c;font-weight:500">Emprunté</span></div><div class="cc-sub"><span class="n">Neudorf</span></div></div>
+              <div class="cc-right"><button class="btn-add">+ Liste</button></div>
+            </div>
+            <div class="cc">
+              <div class="thumb" style="background:#E0E7F4;font-size:22px">🎮</div>
+              <div class="cc-mid"><div class="cc-title">Marvel's Spider-Man</div><div class="cc-row"><span class="fmt">PS4</span><span class="d7 g"></span><span style="font-size:11px;color:#15803d;font-weight:500">Disponible</span></div><div class="cc-sub">Malraux</div></div>
+              <div class="cc-right"><button class="btn-add">+ Liste</button></div>
+            </div>
+          </div>
+
+          <!-- Zone basse : pills + recherche + nav -->
+          <div class="nav">
+            <!-- Pills en bas, au-dessus de la recherche -->
+            <div class="bot-zone">
+              <div class="bot-pills">
+                <button class="pill">Tout</button>
+                <button class="pill on">PS5</button>
+                <button class="pill">PS4</button>
+                <button class="pill">Films</button>
+                <button class="pill">BD</button>
+                <div class="pill-icon">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+                </div>
+              </div>
+              <!-- Champ de recherche en bas -->
+              <div class="bot-srch">
+                <div class="srch">
+                  <span class="srch-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg></span>
+                  <input class="srch-in" type="text" value="spider-man">
+                  <button class="srch-clear"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+                </div>
+              </div>
+            </div>
+            <div class="nav-dots"><div class="nd"></div><div class="nd on"></div><div class="nd"></div></div>
+            <div class="nav-items">
+              <div class="ni"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#637080" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><span class="ni-label">Prêts</span></div>
+              <div class="ni"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0D1B2A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><span class="ni-label on">Catalogue</span></div>
+              <div class="ni"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#637080" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg><span class="ni-label">Listes</span></div>
+            </div>
+            <div class="safe"></div>
+          </div>
+        </div>
+      </div>
+      <div class="phone-label" style="color:#15803D">Après — filtres &amp; recherche en bas</div>
+    </div>
+
+  </div>
+</div>
+
+<hr>
+
+<!-- ============================================================
+     SECTION 3 : ZOOM — COULEUR NEUDORF
+============================================================ -->
+<div class="section">
+  <div class="section-head">Couleur Neudorf · mise en avant contextuelle</div>
+  <p style="font-size:13px;color:var(--text-2);max-width:620px;line-height:1.6;margin-bottom:28px">
+    Malraux reste neutre (gris discret). Neudorf apparaît en <strong style="color:var(--neudorf)">bleu teal</strong> dans tous les onglets où la location est affichée.
+    Ça sort visuellement dans les rares cas où c'est Neudorf, sans décorer les cas fréquents Malraux.
+  </p>
+  <div style="background:var(--surface);border-radius:14px;padding:20px;display:inline-block;border:1px solid var(--border);max-width:400px">
+    <!-- Booking item Malraux -->
+    <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:.5px solid var(--border)">
+      <div style="width:44px;height:63px;border-radius:6px;background:#E0E7F4;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">🎮</div>
+      <div>
+        <div style="font-size:13px;font-weight:700;color:var(--heading)">Astro Bot</div>
+        <div style="font-size:10px;color:var(--text-2);margin-top:2px">Jeu vidéo · Malraux</div>
+        <div style="margin-top:7px"><span class="badge g"><span class="dot6"></span>À récupérer</span></div>
+      </div>
+    </div>
+    <!-- Booking item Neudorf — couleur -->
+    <div style="display:flex;align-items:center;gap:12px;padding:10px 0">
+      <div style="width:44px;height:63px;border-radius:6px;background:#FFEDD5;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">🎬</div>
+      <div>
+        <div style="font-size:13px;font-weight:700;color:var(--heading)">Perfect Days</div>
+        <div style="font-size:10px;margin-top:2px">Vidéo · <span style="color:var(--neudorf);font-weight:600">Neudorf</span></div>
+        <div style="margin-top:7px"><span class="badge g"><span class="dot6"></span>À récupérer</span></div>
+      </div>
+    </div>
+    <div style="font-size:11px;color:var(--text-2);margin-top:14px;padding-top:14px;border-top:.5px solid var(--border)">
+      ↑ Malraux : texte neutre &nbsp;&nbsp; ↑ Neudorf : <span style="color:var(--neudorf);font-weight:600">bleu teal #0891B2</span>
+    </div>
+  </div>
+</div>
+
+<hr>
+
+<!-- ============================================================
+     SECTION 4 : RÉCAPITULATIF DES CHANGEMENTS
+============================================================ -->
+<div class="section">
+  <div class="section-head">Récapitulatif des changements</div>
+  <div class="cl-grid">
+
+    <div class="cl-card">
+      <div><span class="tag q">Quick win</span></div>
+      <div class="cl-title">Renommage "Compte" → "Prêts"</div>
+      <div class="cl-desc">L'onglet affiche prêts et réservations — "Prêts" est plus juste et parlant dans le contexte bibliothèque.</div>
+    </div>
+
+    <div class="cl-card">
+      <div><span class="tag q">Quick win</span></div>
+      <div class="cl-title">Croix de recherche agrandie (44×44px)</div>
+      <div class="cl-desc">Zone de touch portée à 44px sur chaque onglet. Icône X Lucide à la place du × HTML. Centrée proprement.</div>
+    </div>
+
+    <div class="cl-card">
+      <div><span class="tag q">Quick win</span></div>
+      <div class="cl-title">Point de statut centré verticalement</div>
+      <div class="cl-desc">Dans Listes : le dot vert/orange/gris était ancré en haut. Il est maintenant centré sur la hauteur totale de la card (avec le thumbnail).</div>
+    </div>
+
+    <div class="cl-card">
+      <div><span class="tag q">Quick win</span></div>
+      <div class="cl-title">Couleur Neudorf (#0891B2)</div>
+      <div class="cl-desc">Neudorf apparaît en bleu teal dans Prêts, Catalogue et Listes. Malraux reste gris neutre. Visuel immédiat dans les rares cas Neudorf.</div>
+    </div>
+
+    <div class="cl-card">
+      <div><span class="tag q">Quick win</span></div>
+      <div class="cl-title">Swipe depuis Listes → Catalogue corrigé</div>
+      <div class="cl-desc">Si la corbeille est fermée, le swipe droite navigue vers l'onglet Catalogue. Si ouverte, le swipe droite ferme d'abord la corbeille.</div>
+    </div>
+
+    <div class="cl-card">
+      <div><span class="tag v">Visuel</span></div>
+      <div class="cl-title">Pills sans emojis</div>
+      <div class="cl-desc">Les emojis sont supprimés des pills filtres (Catalogue) et des onglets listes (Mes listes). Texte seul, plus propre, plus premium.</div>
+    </div>
+
+    <div class="cl-card">
+      <div><span class="tag v">Visuel</span></div>
+      <div class="cl-title">Thumbnails + format badge dans Catalogue</div>
+      <div class="cl-desc">Les emojis de type remplacés par les vraies couvertures (ou placeholder gris + icône). Badge de format (PS5, Blu-ray…) ajouté. Indicateur dispo vert/orange inline.</div>
+    </div>
+
+    <div class="cl-card">
+      <div><span class="tag v">Visuel</span></div>
+      <div class="cl-title">Thumbnails dans Listes</div>
+      <div class="cl-desc">Les items vérifiés affichent leur couverture. Les non-vérifiés ont un placeholder gris avec icône de type selon la liste (manette PS5, film…).</div>
+    </div>
+
+    <div class="cl-card">
+      <div><span class="tag v">Visuel</span></div>
+      <div class="cl-title">Card entière cliquable — plus de bouton →</div>
+      <div class="cl-desc">Le bouton "→" du Catalogue est supprimé. Toute la card est cliquable pour ouvrir le lien médiathèque. Le bouton "+ Liste" reste seul à droite.</div>
+    </div>
+
+    <div class="cl-card">
+      <div><span class="tag s">Structural</span></div>
+      <div class="cl-title">Navigation full iOS — recherche &amp; filtres en bas</div>
+      <div class="cl-desc">Sur les onglets Catalogue et Listes : la recherche et les pills descendent au-dessus de la nav. Le header conserve titre + sélecteur médiathèque.</div>
+    </div>
+
+    <div class="cl-card">
+      <div><span class="tag s">Structural</span></div>
+      <div class="cl-title">Conflit swipe pills/onglets résolu</div>
+      <div class="cl-desc">Quand un scroll horizontal commence dans la zone des pills, la navigation par swipe entre onglets est bloquée jusqu'à la fin du geste.</div>
+    </div>
+
+    <div class="cl-card">
+      <div><span class="tag s">Structural</span></div>
+      <div class="cl-title">Pull-to-refresh dans Listes</div>
+      <div class="cl-desc">Le bouton "Tout vérifier" reste pour les desktop. Sur mobile, un pull-to-refresh déclenche la vérification. Hint visuel discret au premier lancement.</div>
+    </div>
+
+  </div>
+</div>
+
+<div style="font-size:12px;color:var(--text-2);font-family:'DM Mono',monospace;text-align:center;margin-top:48px">
+  design-preview.html · Médiathèques Strasbourg · 2026
+</div>
+
+</body>
+</html>
