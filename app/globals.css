@@ -27,6 +27,8 @@
   --orange-alpha:  rgba(249, 115, 22, 0.3);
   --nav-bg:        rgba(255, 255, 255, 0.85);
 
+  --neudorf:   #0891B2;
+
   --radius:    16px;
   --radius-sm: 8px;
   --nav-h:     64px;
@@ -48,6 +50,11 @@
     --nav-bg:      rgba(22, 34, 50, 0.88);
     --content-bg:  #0D1B2A;
   }
+}
+
+/* Bouton corbeille desktop masqué sur écrans tactiles */
+@media (hover: none) {
+  .desktop-trash-btn { display: none !important; }
 }
 
 .group-items > *:not(:last-child) {

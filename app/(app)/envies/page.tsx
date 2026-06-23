@@ -1,6 +1,8 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import { Trash2 } from 'lucide-react'
+import CoverImg from '@/components/CoverImg'
+import { ViewModeToggle, type ViewMode, TYPE_CONFIG, typeBadge } from '@/components/ViewModeToggle'
 import type { CatalogueItem } from '@/app/api/catalogue/search/route'
 import {
   loadStore, saveStore, addItem, removeItem, updateItem,
@@ -10,8 +12,6 @@ import {
   type WishlistStore, type WishlistItem, type LibraryKey,
 } from '@/lib/wishlists'
 
-// Strict title match: avoids false positives like "Death Stranding" → "Death Stranding 2"
-// Only matches if one title is a prefix of the other, and the extra part is a subtitle (: or -)
 function titleMatches(resultTitle: string, searchTitle: string): boolean {
   const r = resultTitle.toLowerCase().trim()
   const s = searchTitle.toLowerCase().trim()
@@ -19,7 +19,6 @@ function titleMatches(resultTitle: string, searchTitle: string): boolean {
   const check = (longer: string, shorter: string) => {
     if (!longer.startsWith(shorter)) return false
     const rest = longer.slice(shorter.length).trimStart()
-    // Accept empty, subtitle separator, or opening paren — but NOT digits or extra words
     return !rest || rest[0] === ':' || rest[0] === '-' || rest[0] === '('
   }
   return check(r, s) || check(s, r)
@@ -41,7 +40,6 @@ const LIBRARY_PARAM: Record<LibraryKey, string> = {
 
 const LIST_ICONS = ['🎮', '🕹️', '🎬', '🎥', '📚', '📖', '🎵', '🎭', '⭐', '❤️', '🔖', '🎯']
 
-// Migrate old single-list PS5 data to new store
 function migrateOldData(store: WishlistStore): WishlistStore {
   const OLD_KEY = 'mediatheques_wishlist_ps5'
   try {
@@ -50,13 +48,12 @@ function migrateOldData(store: WishlistStore): WishlistStore {
     const old = JSON.parse(raw) as { id: string; title: string; status: string; match: CatalogueItem | null; checkedAt: number | null }[]
     if (!old.length) return store
 
-    // Only migrate if ps5 list is currently empty
-    const ps5Items = store.items.filter(i => i.listId === 'ps5')
-    if (ps5Items.length > 0) { localStorage.removeItem(OLD_KEY); return store }
+    const jeuxItems = store.items.filter(i => i.listId === 'jeux')
+    if (jeuxItems.length > 0) { localStorage.removeItem(OLD_KEY); return store }
 
     const migrated: WishlistItem[] = old.map(o => ({
       id: o.id,
-      listId: 'ps5',
+      listId: 'jeux',
       title: o.title,
       addedAt: parseInt(o.id) || Date.now(),
       status: (o.status as WishlistItem['status']) || 'idle',
@@ -76,7 +73,7 @@ function migrateOldData(store: WishlistStore): WishlistStore {
 
 export default function EnviesPage() {
   const [store, setStore] = useState<WishlistStore>(() => ({ lists: DEFAULT_LISTS, items: [], defaultLibrary: 'malraux_neudorf' }))
-  const [activeList, setActiveList] = useState<string>('ps5')
+  const [activeList, setActiveList] = useState<string>('jeux')
   const [searchFilter, setSearchFilter] = useState('')
   const [globalChecking, setGlobalChecking] = useState(false)
   const [showNewListModal, setShowNewListModal] = useState(false)
@@ -84,16 +81,30 @@ export default function EnviesPage() {
   const [newListIcon, setNewListIcon] = useState('⭐')
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
   const [showManageModal, setShowManageModal] = useState(false)
+  const [viewMode, setViewMode] = useState<ViewMode>('badges')
   const cloudSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const cloudDirty = useRef(false)
 
+  // Pull-to-refresh
+  const contentRef = useRef<HTMLDivElement>(null)
+  const pullStartYRef = useRef(0)
+  const isPullingRef = useRef(false)
+  const pullProgressRef = useRef(0)
+  const [pullProgress, setPullProgress] = useState(0)
+  const checkAllRef = useRef<() => void>(() => {})
+
   useEffect(() => {
-    // Load from localStorage immediately for instant render
+    const saved = localStorage.getItem('listes_view_mode') as ViewMode | null
+    if (saved) setViewMode(saved)
+  }, [])
+
+  useEffect(() => {
+    localStorage.setItem('listes_view_mode', viewMode)
+  }, [viewMode])
+
+  useEffect(() => {
     const local = migrateOldData(loadStore())
     setStore(local)
-
-    // Then fetch cloud and merge — use functional updater so we merge with the CURRENT state
-    // (not the initial snapshot), preserving any availability already set by "Tout vérifier"
     loadFromCloud().then(cloud => {
       if (!cloud) {
         if (local.items.length > 0 || local.lists.some(l => !l.builtIn)) {
@@ -106,10 +117,9 @@ export default function EnviesPage() {
         saveStore(merged)
         return merged
       })
-    }).catch(() => {/* offline or not logged in */})
+    }).catch(() => {})
   }, [])
 
-  // Debounced cloud save — prevents race conditions during batch checks
   useEffect(() => {
     if (!cloudDirty.current) return
     cloudDirty.current = false
@@ -137,9 +147,14 @@ export default function EnviesPage() {
   }
 
   const currentList = store.lists.find(l => l.id === activeList) ?? store.lists[0]
+
+  const q = searchFilter.toLowerCase()
   const allItems = store.items
     .filter(i => i.listId === activeList)
-    .filter(i => !searchFilter || i.title.toLowerCase().includes(searchFilter.toLowerCase()))
+    .filter(i => !q
+      || i.title.toLowerCase().includes(q)
+      || (i.match?.subject ?? '').toLowerCase().includes(q)
+    )
   const found = allItems.filter(i => i.status === 'found')
   const notFound = allItems.filter(i => i.status === 'not_found')
   const pending = allItems.filter(i => ['idle', 'checking', 'error'].includes(i.status))
@@ -206,6 +221,7 @@ export default function EnviesPage() {
   }
 
   async function checkAll() {
+    if (globalChecking) return
     setGlobalChecking(true)
     const toCheck = allItems.filter(i => i.status !== 'checking')
     const BATCH = 3
@@ -262,14 +278,71 @@ export default function EnviesPage() {
     setDeleteConfirmId(null)
   }
 
+  // Keep checkAllRef pointing to the latest checkAll (so DOM listeners always call it fresh)
+  useEffect(() => { checkAllRef.current = checkAll })
+
+  // Pull-to-refresh via DOM listeners (passive: false on touchmove to block native iOS PTR)
+  useEffect(() => {
+    const el = contentRef.current as HTMLDivElement
+    if (!el) return
+
+    function onTouchStart(e: TouchEvent) {
+      if (el.scrollTop === 0) {
+        pullStartYRef.current = e.touches[0].clientY
+        isPullingRef.current = true
+      }
+    }
+
+    function onTouchMove(e: TouchEvent) {
+      if (!isPullingRef.current) return
+      const dy = e.touches[0].clientY - pullStartYRef.current
+      if (dy > 0 && el.scrollTop === 0) {
+        e.preventDefault()
+        const p = Math.min(dy / 60, 1)
+        pullProgressRef.current = p
+        setPullProgress(p)
+      } else {
+        isPullingRef.current = false
+        pullProgressRef.current = 0
+        setPullProgress(0)
+      }
+    }
+
+    function onTouchEnd() {
+      if (!isPullingRef.current) return
+      const triggered = pullProgressRef.current >= 1
+      isPullingRef.current = false
+      pullProgressRef.current = 0
+      setPullProgress(0)
+      if (triggered) checkAllRef.current()
+    }
+
+    el.addEventListener('touchstart', onTouchStart, { passive: true })
+    el.addEventListener('touchmove', onTouchMove, { passive: false })
+    el.addEventListener('touchend', onTouchEnd, { passive: true })
+    return () => {
+      el.removeEventListener('touchstart', onTouchStart)
+      el.removeEventListener('touchmove', onTouchMove)
+      el.removeEventListener('touchend', onTouchEnd)
+    }
+  }, [])
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100%' }}>
-      {/* Header */}
-      <div style={{ background: 'var(--surface)', padding: '20px 18px 0', borderBottom: '1px solid var(--border)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-          <div style={{ fontSize: '26px', fontWeight: 800, color: 'var(--color-heading)', letterSpacing: '-0.5px', fontFamily: 'DM Sans, sans-serif' }}>
-            Mes listes
-          </div>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+
+      {/* Lightweight header: title + library selector */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '16px 18px 14px',
+        background: 'var(--surface)',
+        borderBottom: '0.5px solid var(--border)',
+        flexShrink: 0,
+      }}>
+        <div style={{ fontSize: '22px', fontWeight: 800, color: 'var(--color-heading)', letterSpacing: '-0.5px', fontFamily: 'DM Sans, sans-serif' }}>
+          Mes listes
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <ViewModeToggle value={viewMode} onChange={setViewMode} />
           <select
             value={store.defaultLibrary}
             onChange={e => setLibrary(e.target.value as LibraryKey)}
@@ -286,59 +359,39 @@ export default function EnviesPage() {
             ))}
           </select>
         </div>
+      </div>
 
-        {/* Search — same position as Catalogue (inside header, above tabs) */}
-        <div style={{ position: 'relative', marginBottom: '14px' }}>
-          <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', fontSize: '14px', pointerEvents: 'none', opacity: 0.5 }}>
-            🔍
-          </span>
-          <input
-            type="search"
-            value={searchFilter}
-            onChange={e => setSearchFilter(e.target.value)}
-            placeholder={`Rechercher ou ajouter dans ${currentList?.name ?? 'la liste'}…`}
-            style={{
-              width: '100%', padding: '10px 36px',
-              borderRadius: 'var(--radius-sm)',
-              border: '1.5px solid var(--border)',
-              fontSize: '14px',
-              background: 'var(--bg)', color: 'var(--text)',
-              fontFamily: 'DM Sans, sans-serif', outline: 'none',
-            }}
-          />
-          {searchFilter && (
-            <button onClick={() => setSearchFilter('')}
-              style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px', color: 'var(--text-2)' }}>
-              ×
-            </button>
-          )}
-        </div>
-
-        {/* List tabs — only visible lists */}
-        <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '14px', scrollbarWidth: 'none' }}>
+      {/* Top zone: list pills + search */}
+      <div style={{
+        flexShrink: 0,
+        background: 'var(--surface)',
+        borderBottom: '0.5px solid var(--border)',
+      }}>
+        {/* List tabs */}
+        <div
+          data-hscroll
+          style={{ display: 'flex', gap: '6px', overflowX: 'auto', padding: '10px 16px 0', scrollbarWidth: 'none' }}
+        >
           {store.lists.filter(l => !l.hidden).map(list => (
-            <div key={list.id} style={{ position: 'relative', flexShrink: 0 }}>
-              <button
-                onClick={() => setActiveList(list.id)}
-                style={{
-                  fontSize: '10.5px', fontWeight: 600,
-                  padding: '5px 12px',
-                  borderRadius: '20px', border: 'none', cursor: 'pointer',
-                  whiteSpace: 'nowrap', fontFamily: 'DM Sans, sans-serif',
-                  background: activeList === list.id ? 'var(--navy)' : 'var(--tab-inactive-bg)',
-                  color: activeList === list.id ? 'white' : 'var(--text-2)',
-                  transition: 'background 0.12s, color 0.12s',
-                }}
-              >
-                {list.icon} {list.name}
-                {(() => {
-                  const cnt = store.items.filter(i => i.listId === list.id).length
-                  return cnt > 0 ? (
-                    <span style={{ marginLeft: '5px', opacity: 0.65 }}>{cnt}</span>
-                  ) : null
-                })()}
-              </button>
-            </div>
+            <button
+              key={list.id}
+              onClick={() => setActiveList(list.id)}
+              style={{
+                fontSize: '10.5px', fontWeight: 600, flexShrink: 0,
+                padding: '5px 12px',
+                borderRadius: '20px', border: 'none', cursor: 'pointer',
+                whiteSpace: 'nowrap', fontFamily: 'DM Sans, sans-serif',
+                background: activeList === list.id ? 'var(--navy)' : 'var(--tab-inactive-bg)',
+                color: activeList === list.id ? 'white' : 'var(--text-2)',
+                transition: 'background 0.12s, color 0.12s',
+              }}
+            >
+              {list.name}
+              {(() => {
+                const cnt = store.items.filter(i => i.listId === list.id).length
+                return cnt > 0 ? <span style={{ marginLeft: '5px', opacity: 0.65 }}>{cnt}</span> : null
+              })()}
+            </button>
           ))}
           <button
             onClick={() => setShowNewListModal(true)}
@@ -366,148 +419,192 @@ export default function EnviesPage() {
             ⚙
           </button>
         </div>
+
+        {/* Search input */}
+        <div style={{ position: 'relative', padding: '8px 16px 12px' }}>
+          <span style={{ position: 'absolute', left: '28px', top: '50%', transform: 'translateY(-50%)', fontSize: '14px', pointerEvents: 'none', opacity: 0.45 }}>
+            🔍
+          </span>
+          <input
+            type="search"
+            value={searchFilter}
+            onChange={e => setSearchFilter(e.target.value)}
+            placeholder={`Rechercher ou ajouter dans ${currentList?.name ?? 'la liste'}…`}
+            style={{
+              width: '100%', padding: '10px 44px 10px 36px',
+              borderRadius: 'var(--radius-sm)',
+              border: '1.5px solid var(--border)',
+              fontSize: '14px',
+              background: 'var(--bg)', color: 'var(--text)',
+              fontFamily: 'DM Sans, sans-serif', outline: 'none',
+              boxSizing: 'border-box',
+            }}
+          />
+          {searchFilter && (
+            <button
+              onClick={() => setSearchFilter('')}
+              style={{
+                position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)',
+                background: 'none', border: 'none', cursor: 'pointer',
+                color: 'var(--text-2)',
+                width: '44px', height: '44px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '18px',
+              }}
+            >
+              ×
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Content */}
-      <div style={{ padding: '14px 16px', flex: 1, background: 'var(--content-bg)' }}>
+      {/* Scrollable content with pull-to-refresh */}
+      <div
+        ref={contentRef}
+        style={{ flex: 1, overflowY: 'auto', minHeight: 0, padding: '0 16px 14px', background: 'var(--content-bg)', overscrollBehaviorY: 'contain' }}
+      >
+        {/* Pull-to-refresh indicator */}
+        {pullProgress > 0 && (
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            height: `${pullProgress * 44}px`, overflow: 'hidden',
+            color: 'var(--text-2)', fontSize: '11px', fontFamily: 'DM Mono, monospace',
+            transition: 'none',
+          }}>
+            {pullProgress >= 1 ? '↑ Relâcher pour vérifier' : '↓ Tirer pour vérifier'}
+          </div>
+        )}
 
-        {store.items.filter(i => i.listId === activeList).length === 0 && (
-          <div style={{ textAlign: 'center', paddingTop: '32px', color: 'var(--text-2)', fontSize: '13px' }}>
-            <div style={{ fontSize: '32px', marginBottom: '12px' }}>{currentList?.icon ?? '⭐'}</div>
-            {searchFilter.trim() ? (
+        <div style={{ paddingTop: '14px' }}>
+          {store.items.filter(i => i.listId === activeList).length === 0 && (
+            <div style={{ textAlign: 'center', paddingTop: '32px', color: 'var(--text-2)', fontSize: '13px' }}>
+              <div style={{ fontSize: '32px', marginBottom: '12px' }}>{currentList?.icon ?? '⭐'}</div>
+              {searchFilter.trim() ? (
+                <button
+                  onClick={handleAddFromSearch}
+                  style={{
+                    marginTop: '8px', padding: '10px 20px',
+                    background: 'var(--navy)', color: 'white',
+                    border: 'none', borderRadius: 'var(--radius-sm)',
+                    fontSize: '13px', fontWeight: 700,
+                    cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
+                  }}
+                >
+                  + Ajouter &laquo;{searchFilter.trim()}&raquo;
+                </button>
+              ) : (
+                <span>Liste vide — tape un titre dans le champ ci-dessus ou ajoute depuis le Catalogue</span>
+              )}
+            </div>
+          )}
+
+          {store.items.filter(i => i.listId === activeList).length > 0 && allItems.length === 0 && (
+            <div style={{ textAlign: 'center', paddingTop: '32px', color: 'var(--text-2)', fontSize: '13px' }}>
+              <div style={{ marginBottom: '14px' }}>Pas dans la liste — pas encore au catalogue ?</div>
               <button
                 onClick={handleAddFromSearch}
                 style={{
-                  marginTop: '8px', padding: '10px 20px',
+                  padding: '10px 20px',
                   background: 'var(--navy)', color: 'white',
                   border: 'none', borderRadius: 'var(--radius-sm)',
                   fontSize: '13px', fontWeight: 700,
                   cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
                 }}
               >
-                + Ajouter &laquo;{searchFilter.trim()}&raquo;
-              </button>
-            ) : (
-              <span>Liste vide — tape un titre dans le champ ci-dessus ou ajoute depuis le Catalogue</span>
-            )}
-          </div>
-        )}
-        {store.items.filter(i => i.listId === activeList).length > 0 && allItems.length === 0 && (
-          <div style={{ textAlign: 'center', paddingTop: '32px', color: 'var(--text-2)', fontSize: '13px' }}>
-            <div style={{ marginBottom: '14px' }}>Pas dans la liste — pas encore au catalogue ?</div>
-            <button
-              onClick={handleAddFromSearch}
-              style={{
-                padding: '10px 20px',
-                background: 'var(--navy)', color: 'white',
-                border: 'none', borderRadius: 'var(--radius-sm)',
-                fontSize: '13px', fontWeight: 700,
-                cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
-              }}
-            >
-              + Ajouter &laquo;{searchFilter.trim()}&raquo; à la liste
-            </button>
-          </div>
-        )}
-
-        {allItems.length > 0 && (
-          <>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-              <div style={{ fontSize: '10px', color: 'var(--text-2)', fontFamily: 'DM Mono, monospace' }}>
-                {(() => {
-                  const nAvail = found.filter(i => i.match?.available === true).length
-                  const nLoaned = found.filter(i => i.match?.available === false).length
-                  const parts = []
-                  if (nAvail > 0) parts.push(`${nAvail} disponible${nAvail > 1 ? 's' : ''}`)
-                  if (nLoaned > 0) parts.push(`${nLoaned} emprunté${nLoaned > 1 ? 's' : ''}`)
-                  return (parts.length > 0 ? parts.join(' · ') : 'Aucun disponible') + ` · ${allItems.length} titre${allItems.length > 1 ? 's' : ''}`
-                })()}
-              </div>
-              <button
-                onClick={checkAll}
-                disabled={globalChecking}
-                style={{
-                  padding: '5px 14px', background: 'var(--tab-inactive-bg)', border: 'none',
-                  borderRadius: '20px', fontSize: '10.5px', fontWeight: 600,
-                  color: 'var(--text-2)', cursor: globalChecking ? 'wait' : 'pointer',
-                  fontFamily: 'DM Sans, sans-serif',
-                }}
-              >
-                {globalChecking ? 'Vérification…' : '↻ Tout vérifier'}
+                + Ajouter &laquo;{searchFilter.trim()}&raquo; à la liste
               </button>
             </div>
-            {(() => {
-              const lastCheckedAt = allItems.reduce((max, i) => Math.max(max, i.checkedAt ?? 0), 0) || null
-              return lastCheckedAt ? (
-                <div style={{ fontSize: '10px', color: 'var(--text-2)', fontFamily: 'DM Mono, monospace', marginBottom: '14px', opacity: 0.7 }}>
-                  vérifié {formatCheckedAt(lastCheckedAt)}
+          )}
+
+          {allItems.length > 0 && (
+            <>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                <div style={{ fontSize: '10px', color: 'var(--text-2)', fontFamily: 'DM Mono, monospace' }}>
+                  {(() => {
+                    const nAvail = found.filter(i => i.match?.available === true).length
+                    const nLoaned = found.filter(i => i.match?.available === false).length
+                    const parts = []
+                    if (nAvail > 0) parts.push(`${nAvail} disponible${nAvail > 1 ? 's' : ''}`)
+                    if (nLoaned > 0) parts.push(`${nLoaned} emprunté${nLoaned > 1 ? 's' : ''}`)
+                    return (parts.length > 0 ? parts.join(' · ') : 'Aucun disponible') + ` · ${allItems.length} titre${allItems.length > 1 ? 's' : ''}`
+                  })()}
                 </div>
-              ) : <div style={{ marginBottom: '14px' }} />
-            })()}
+                <button
+                  onClick={checkAll}
+                  disabled={globalChecking}
+                  style={{
+                    padding: '5px 14px', background: 'var(--tab-inactive-bg)', border: 'none',
+                    borderRadius: '20px', fontSize: '10.5px', fontWeight: 600,
+                    color: 'var(--text-2)', cursor: globalChecking ? 'wait' : 'pointer',
+                    fontFamily: 'DM Sans, sans-serif',
+                  }}
+                >
+                  {globalChecking ? 'Vérification…' : '↻ Tout vérifier'}
+                </button>
+              </div>
+              {(() => {
+                const lastCheckedAt = allItems.reduce((max, i) => Math.max(max, i.checkedAt ?? 0), 0) || null
+                return lastCheckedAt ? (
+                  <div style={{ fontSize: '10px', color: 'var(--text-2)', fontFamily: 'DM Mono, monospace', marginBottom: '14px', opacity: 0.7 }}>
+                    vérifié {formatCheckedAt(lastCheckedAt)}
+                  </div>
+                ) : <div style={{ marginBottom: '14px' }} />
+              })()}
 
-            {found.length > 0 && (
-              <>
-                {(() => {
-                  const available = found.filter(i => i.match?.available === true)
-                  const loaned = found.filter(i => i.match?.available === false)
-                  const unknown = found.filter(i => i.match?.available == null)
-                  return (
-                    <>
-                      {available.length > 0 && (
-                        <Section label="Disponible" count={available.length} accent="var(--green)">
-                          {available.map(item => (
-                            <ItemCard key={item.id} item={item}
-                              onRemove={id => mutate(s => removeItem(s, id))} />
-                          ))}
-                        </Section>
-                      )}
-                      {loaned.length > 0 && (
-                        <Section label="Emprunté" count={loaned.length} accent="var(--orange)">
-                          {loaned.map(item => (
-                            <ItemCard key={item.id} item={item}
-                              onRemove={id => mutate(s => removeItem(s, id))} />
-                          ))}
-                        </Section>
-                      )}
-                      {unknown.length > 0 && (
-                        <Section label="Au catalogue" count={unknown.length} accent="var(--text-2)">
-                          {unknown.map(item => (
-                            <ItemCard key={item.id} item={item}
-                              onRemove={id => mutate(s => removeItem(s, id))} />
-                          ))}
-                        </Section>
-                      )}
-                    </>
-                  )
-                })()}
-              </>
-            )}
+              {found.length > 0 && (() => {
+                const available = found.filter(i => i.match?.available === true)
+                const loaned = found.filter(i => i.match?.available === false)
+                const unknown = found.filter(i => i.match?.available == null)
+                return (
+                  <>
+                    {available.length > 0 && (
+                      <Section label="Disponible" count={available.length} accent="var(--green)">
+                        {available.map(item => (
+                          <ItemCard key={item.id} item={item} listDocType={currentList?.docType ?? ''}
+                            onRemove={id => mutate(s => removeItem(s, id))} viewMode={viewMode} />
+                        ))}
+                      </Section>
+                    )}
+                    {loaned.length > 0 && (
+                      <Section label="Emprunté" count={loaned.length} accent="var(--orange)">
+                        {loaned.map(item => (
+                          <ItemCard key={item.id} item={item} listDocType={currentList?.docType ?? ''}
+                            onRemove={id => mutate(s => removeItem(s, id))} viewMode={viewMode} />
+                        ))}
+                      </Section>
+                    )}
+                    {unknown.length > 0 && (
+                      <Section label="Au catalogue" count={unknown.length} accent="var(--text-2)">
+                        {unknown.map(item => (
+                          <ItemCard key={item.id} item={item} listDocType={currentList?.docType ?? ''}
+                            onRemove={id => mutate(s => removeItem(s, id))} viewMode={viewMode} />
+                        ))}
+                      </Section>
+                    )}
+                  </>
+                )
+              })()}
 
-            {notFound.length > 0 && (
-              <Section label="Pas trouvé" count={notFound.length} accent="var(--text-2)">
-                {notFound.map(item => (
-                  <ItemCard
-                    key={item.id}
-                    item={item}
-                    onRemove={id => mutate(s => removeItem(s, id))}
-                  />
-                ))}
-              </Section>
-            )}
+              {notFound.length > 0 && (
+                <Section label="Pas trouvé" count={notFound.length} accent="var(--text-2)">
+                  {notFound.map(item => (
+                    <ItemCard key={item.id} item={item} listDocType={currentList?.docType ?? ''}
+                      onRemove={id => mutate(s => removeItem(s, id))} viewMode={viewMode} />
+                  ))}
+                </Section>
+              )}
 
-            {pending.length > 0 && (
-              <Section label="En attente" count={pending.length} accent="var(--text-2)">
-                {pending.map(item => (
-                  <ItemCard
-                    key={item.id}
-                    item={item}
-                    onRemove={id => mutate(s => removeItem(s, id))}
-                  />
-                ))}
-              </Section>
-            )}
-          </>
-        )}
+              {pending.length > 0 && (
+                <Section label="En attente" count={pending.length} accent="var(--text-2)">
+                  {pending.map(item => (
+                    <ItemCard key={item.id} item={item} listDocType={currentList?.docType ?? ''}
+                      onRemove={id => mutate(s => removeItem(s, id))} viewMode={viewMode} />
+                  ))}
+                </Section>
+              )}
+            </>
+          )}
+        </div>
       </div>
 
       {/* Manage lists modal */}
@@ -520,7 +617,6 @@ export default function EnviesPage() {
             style={{ background: 'var(--surface)', width: '100%', borderRadius: '16px 16px 0 0', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}
             onClick={e => e.stopPropagation()}
           >
-            {/* Header */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 20px 12px' }}>
               <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-heading)' }}>Gérer les listes</div>
               <button onClick={() => setShowManageModal(false)}
@@ -528,30 +624,20 @@ export default function EnviesPage() {
                 ×
               </button>
             </div>
-
-            {/* List */}
             <div style={{ overflowY: 'auto', padding: '0 12px 24px' }}>
               {store.lists.map((list, idx) => (
                 <div key={list.id} style={{
                   display: 'flex', alignItems: 'center', gap: '10px',
                   padding: '10px 8px', borderRadius: 'var(--radius-sm)',
-                  opacity: list.hidden ? 0.4 : 1,
-                  transition: 'opacity 0.15s',
+                  opacity: list.hidden ? 0.4 : 1, transition: 'opacity 0.15s',
                 }}>
-                  {/* Eye toggle */}
                   <button
                     onClick={() => toggleListVisibility(list.id)}
                     title={list.hidden ? 'Afficher' : 'Masquer'}
-                    style={{
-                      background: 'none', border: 'none', cursor: 'pointer',
-                      fontSize: '16px', padding: '2px', flexShrink: 0,
-                      color: list.hidden ? 'var(--text-2)' : 'var(--navy)',
-                    }}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px', padding: '2px', flexShrink: 0, color: list.hidden ? 'var(--text-2)' : 'var(--navy)' }}
                   >
                     {list.hidden ? '🚫' : '👁'}
                   </button>
-
-                  {/* Icon + name */}
                   <span style={{ fontSize: '16px', flexShrink: 0 }}>{list.icon}</span>
                   <span style={{ flex: 1, fontSize: '13px', fontWeight: 600, color: 'var(--color-heading)' }}>
                     {list.name}
@@ -560,46 +646,17 @@ export default function EnviesPage() {
                       return cnt > 0 ? <span style={{ fontWeight: 400, color: 'var(--text-2)', marginLeft: '6px' }}>{cnt}</span> : null
                     })()}
                   </span>
-
-                  {/* Order arrows */}
                   <div style={{ display: 'flex', gap: '2px', flexShrink: 0 }}>
-                    <button
-                      onClick={() => moveList(list.id, 'up')}
-                      disabled={idx === 0}
-                      style={{
-                        width: '28px', height: '28px', borderRadius: '6px',
-                        background: idx === 0 ? 'transparent' : 'var(--tab-inactive-bg)',
-                        border: 'none', cursor: idx === 0 ? 'default' : 'pointer',
-                        color: idx === 0 ? 'transparent' : 'var(--text-2)',
-                        fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      }}
-                    >↑</button>
-                    <button
-                      onClick={() => moveList(list.id, 'down')}
-                      disabled={idx === store.lists.length - 1}
-                      style={{
-                        width: '28px', height: '28px', borderRadius: '6px',
-                        background: idx === store.lists.length - 1 ? 'transparent' : 'var(--tab-inactive-bg)',
-                        border: 'none', cursor: idx === store.lists.length - 1 ? 'default' : 'pointer',
-                        color: idx === store.lists.length - 1 ? 'transparent' : 'var(--text-2)',
-                        fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      }}
-                    >↓</button>
+                    <button onClick={() => moveList(list.id, 'up')} disabled={idx === 0}
+                      style={{ width: '28px', height: '28px', borderRadius: '6px', background: idx === 0 ? 'transparent' : 'var(--tab-inactive-bg)', border: 'none', cursor: idx === 0 ? 'default' : 'pointer', color: idx === 0 ? 'transparent' : 'var(--text-2)', fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>↑</button>
+                    <button onClick={() => moveList(list.id, 'down')} disabled={idx === store.lists.length - 1}
+                      style={{ width: '28px', height: '28px', borderRadius: '6px', background: idx === store.lists.length - 1 ? 'transparent' : 'var(--tab-inactive-bg)', border: 'none', cursor: idx === store.lists.length - 1 ? 'default' : 'pointer', color: idx === store.lists.length - 1 ? 'transparent' : 'var(--text-2)', fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>↓</button>
                   </div>
-
-                  {/* Delete */}
                   <button
                     onClick={() => { setShowManageModal(false); setDeleteConfirmId(list.id) }}
-                    style={{
-                      width: '28px', height: '28px', borderRadius: '6px',
-                      background: 'var(--error-bg)', border: 'none', cursor: 'pointer',
-                      color: 'var(--red)', fontSize: '14px',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    }}
+                    style={{ width: '28px', height: '28px', borderRadius: '6px', background: 'var(--error-bg)', border: 'none', cursor: 'pointer', color: 'var(--red)', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                     title="Supprimer"
-                  >
-                    ×
-                  </button>
+                  >×</button>
                 </div>
               ))}
             </div>
@@ -673,8 +730,6 @@ export default function EnviesPage() {
             <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-heading)', marginBottom: '16px' }}>
               Nouvelle liste
             </div>
-
-            {/* Icon picker */}
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '14px' }}>
               {LIST_ICONS.map(icon => (
                 <button
@@ -692,7 +747,6 @@ export default function EnviesPage() {
                 </button>
               ))}
             </div>
-
             <input
               type="text"
               value={newListName}
@@ -758,12 +812,21 @@ function Section({ label, count, accent, children }: {
   )
 }
 
+const TYPE_ICON: Record<string, string> = {
+  'Jeu vidéo': '🎮', 'Vidéo': '🎬', 'Livre': '📖',
+  'BD ou manga': '📚', 'Musique': '🎵',
+}
+
 function ItemCard({
   item,
+  listDocType,
   onRemove,
+  viewMode,
 }: {
   item: WishlistItem
+  listDocType: string
   onRemove: (id: string) => void
+  viewMode: ViewMode
 }) {
   const [swipeX, setSwipeX] = useState(0)
   const [animating, setAnimating] = useState(false)
@@ -788,6 +851,7 @@ function ItemCard({
     : isChecking ? 'var(--orange)'
     : 'var(--border)'
 
+  // Build subtitle
   let subtitleNode: React.ReactNode = null
   if (isChecking) {
     subtitleNode = <span style={{ fontFamily: 'DM Mono, monospace' }}>Vérification…</span>
@@ -795,21 +859,31 @@ function ItemCard({
     subtitleNode = <span style={{ color: 'var(--red)' }}>Erreur</span>
   } else if (isFound && item.match) {
     const location = item.foundAt ?? ''
-    if (isLoaned && item.match.dueDate) {
-      subtitleNode = (
-        <>
-          {location && <span style={{ color: 'var(--orange)', fontWeight: 500 }}>{location}</span>}
-          <span style={{ color: 'var(--text-2)' }}>{location ? ` · ${item.match.dueDate}` : item.match.dueDate}</span>
-        </>
-      )
-    } else {
-      subtitleNode = location
-        ? <span style={{ color: isAvailable ? 'var(--green)' : 'var(--text-2)', fontWeight: 500 }}>{location}</span>
-        : null
-    }
+    const subject = item.match.subject ?? ''
+    const isNeudorfLoc = location.toLowerCase().includes('neudorf')
+    const locationColor = isNeudorfLoc ? 'var(--neudorf)' : isAvailable ? 'var(--green)' : 'var(--orange)'
+    const locationWeight = isNeudorfLoc ? 700 : 500
+    subtitleNode = (
+      <>
+        {subject && <span>{subject}</span>}
+        {subject && location && <span style={{ color: 'var(--text-2)' }}> · </span>}
+        {location && (
+          <span style={{ color: locationColor, fontWeight: locationWeight }}>{location}</span>
+        )}
+        {isLoaned && item.match.dueDate && (
+          <span style={{ color: 'var(--text-2)' }}> · {item.match.dueDate}</span>
+        )}
+      </>
+    )
   } else if (item.status === 'not_found') {
     subtitleNode = <span style={{ color: 'var(--text-2)' }}>Pas trouvé</span>
   }
+
+  const docType = item.match?.type || listDocType
+  const typeIcon = TYPE_ICON[docType] ?? '📄'
+  const thumbSubject = item.match?.subject ?? ''
+  const typeConf = TYPE_CONFIG[docType]
+  const badge = typeBadge(docType, item.match?.subject ?? '')
 
   const url = item.match?.url ?? null
 
@@ -835,7 +909,6 @@ function ItemCard({
     const dx = e.touches[0].clientX - startXRef.current
     const dy = Math.abs(e.touches[0].clientY - startYRef.current)
     if (dirRef.current === null) {
-      // If panel is open, intercept horizontal gestures early so tab-switcher never sees them
       if (startSwipeXRef.current < 0 && Math.abs(dx) > 3) {
         dirRef.current = 'h'
         e.stopPropagation()
@@ -852,7 +925,6 @@ function ItemCard({
 
   function handleTouchEnd(e: React.TouchEvent) {
     if (dirRef.current !== 'h') return
-    // Bloquer l'événement natif pour que NavBottom (écouteur sur document) ne capture pas le swipe
     e.nativeEvent.stopPropagation()
     if (swipeX < OPEN / 2) {
       snapTo(OPEN)
@@ -866,8 +938,14 @@ function ItemCard({
     if (url) window.open(url, '_blank', 'noopener,noreferrer')
   }
 
+  const panelOpen = swipeX < 0
+
   return (
-    <div data-swipeable style={{ position: 'relative', overflow: 'hidden' }}>
+    <div
+      data-swipeable
+      data-panel-open={panelOpen ? 'true' : 'false'}
+      style={{ position: 'relative', overflow: 'hidden' }}
+    >
       {/* Delete button (swipe reveal) */}
       <div
         role="button"
@@ -900,7 +978,8 @@ function ItemCard({
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         style={{
-          padding: '9px 14px', display: 'flex', alignItems: 'flex-start', gap: '10px',
+          padding: '9px 14px',
+          display: 'flex', alignItems: 'center', gap: '10px',
           cursor: url ? 'pointer' : 'default',
           background: 'var(--surface)',
           transform: `translateX(${swipeX}px)`,
@@ -908,14 +987,43 @@ function ItemCard({
           willChange: 'transform',
         }}
       >
+        {/* Status dot */}
         <div style={{
-          width: '7px', height: '7px', borderRadius: '50%', flexShrink: 0, marginTop: '4px',
+          width: '7px', height: '7px', borderRadius: '50%', flexShrink: 0,
           background: dotColor,
           animation: isChecking ? 'pulse 1s infinite' : 'none',
         }} />
+
+        {/* Vignette — images or icons mode */}
+        {viewMode === 'images' && (
+          <CoverImg thumbnail={item.match?.thumbnail} width={36} height={52} typeIcon={typeIcon} subject={thumbSubject} />
+        )}
+        {viewMode === 'icons' && (
+          <div style={{
+            width: 36, height: 52, flexShrink: 0, borderRadius: 5,
+            background: typeConf?.bg ?? 'var(--tab-inactive-bg)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 18,
+          }}>
+            {typeConf?.emoji ?? typeIcon}
+          </div>
+        )}
+
+        {/* Text content */}
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-heading)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {item.title}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-heading)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0 }}>
+              {item.title}
+            </div>
+            {viewMode === 'badges' && badge && (
+              <span style={{
+                fontSize: '9px', fontWeight: 700, padding: '2px 6px',
+                borderRadius: '20px', background: 'var(--tab-inactive-bg)',
+                color: 'var(--text-2)', whiteSpace: 'nowrap', flexShrink: 0,
+              }}>
+                {badge}
+              </span>
+            )}
           </div>
           {subtitleNode && (
             <div style={{ fontSize: '12px', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -923,13 +1031,15 @@ function ItemCard({
             </div>
           )}
         </div>
-        {/* Desktop-only trash — visible on hover, invisible on touch */}
+
+        {/* Desktop-only trash */}
         <button
+          className="desktop-trash-btn"
           onClick={e => { e.stopPropagation(); handleDelete() }}
           style={{
             background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px',
             color: 'var(--red)', opacity: hovered ? 0.55 : 0,
-            transition: 'opacity 0.15s', flexShrink: 0, alignSelf: 'center',
+            transition: 'opacity 0.15s', flexShrink: 0,
           }}
           tabIndex={-1}
         >
