@@ -96,8 +96,7 @@ async function searchIguana(
     const rscIdMatch = block.match(/^(\d+)"/)
     if (!rscIdMatch) continue
     const rscId = rscIdMatch[1]
-    const chunk = block.split('data-id="')[0] ?? block.slice(0, 2000)
-    const coverMatch = chunk.match(/https:\/\/covers\.syracuse\.cloud\/Cover\/[^\s"'<>]+/)
+    const coverMatch = block.match(/https:\/\/covers\.syracuse\.cloud\/Cover\/[^\s"'<>]+/)
     if (coverMatch && !coverMap[rscId]) coverMap[rscId] = coverMatch[0]
   }
 
