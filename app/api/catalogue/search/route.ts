@@ -113,7 +113,7 @@ async function searchIguana(
       desc: String(resource.Desc ?? ''),
       url: r.FriendlyUrl ?? '',
       ean: typeof resource.Id === 'string' && resource.Id.startsWith('ean:') ? resource.Id.slice(4) : null,
-      thumbnail: coverMap[rscId] ? `/api/cover?url=${encodeURIComponent(coverMap[rscId])}` : undefined,
+      thumbnail: coverMap[rscId] ?? undefined,
     }
   }).filter(r => r.title)
 
