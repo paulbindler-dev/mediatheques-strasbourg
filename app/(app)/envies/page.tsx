@@ -338,7 +338,10 @@ export default function EnviesPage() {
         borderBottom: '0.5px solid var(--border)',
         flexShrink: 0,
       }}>
-        <div style={{ fontSize: '22px', fontWeight: 800, color: 'var(--color-heading)', letterSpacing: '-0.5px', fontFamily: 'DM Sans, sans-serif' }}>
+        <div
+          onClick={() => setViewMode(m => ({ dots: 'icons', icons: 'images', images: 'dots' } as Record<ViewMode, ViewMode>)[m])}
+          style={{ fontSize: '22px', fontWeight: 800, color: 'var(--color-heading)', letterSpacing: '-0.5px', fontFamily: 'DM Sans, sans-serif', cursor: 'pointer', userSelect: 'none' }}
+        >
           Mes listes
         </div>
         <select
