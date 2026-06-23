@@ -1,6 +1,6 @@
 'use client'
 
-export type ViewMode = 'images' | 'icons' | 'badges'
+export type ViewMode = 'images' | 'icons' | 'dots'
 
 const SVG_IMAGES = (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -31,7 +31,7 @@ const SVG_BADGES = (
 const MODES: { key: ViewMode; title: string; icon: React.ReactNode }[] = [
   { key: 'images',  title: 'Images',  icon: SVG_IMAGES },
   { key: 'icons',   title: 'Icônes',  icon: SVG_ICONS },
-  { key: 'badges',  title: 'Badges',  icon: SVG_BADGES },
+  { key: 'dots',    title: 'Points',  icon: SVG_BADGES },
 ]
 
 export function ViewModeToggle({ value, onChange }: {

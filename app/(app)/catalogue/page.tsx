@@ -3,7 +3,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { SlidersHorizontal, Eye, EyeOff, ChevronUp, ChevronDown } from 'lucide-react'
 import type { CatalogueItem } from '@/app/api/catalogue/search/route'
 import CoverImg from '@/components/CoverImg'
-import { ViewModeToggle, type ViewMode, TYPE_CONFIG, typeBadge } from '@/components/ViewModeToggle'
+import { ViewModeToggle, type ViewMode, TYPE_CONFIG } from '@/components/ViewModeToggle'
 import { loadStore, saveStore, addItem, addCustomList, libraryLabel, type LibraryKey } from '@/lib/wishlists'
 
 const LIST_ICONS = ['🎮', '🕹️', '🎬', '🎥', '📚', '📖', '🎵', '🎭', '⭐', '❤️', '🔖', '🎯']
@@ -99,7 +99,7 @@ export default function CataloguePage() {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
   const [showManagePresets, setShowManagePresets] = useState(false)
   const [presetsState, setPresetsState] = useState<PresetsState>({ hiddenIds: [], orderedIds: [] })
-  const [viewMode, setViewMode] = useState<ViewMode>('images')
+  const [viewMode, setViewMode] = useState<ViewMode>('dots')
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const cloudSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const cloudLoaded = useRef(false)
@@ -294,28 +294,25 @@ export default function CataloguePage() {
         <div style={{ fontSize: '22px', fontWeight: 800, color: 'var(--color-heading)', letterSpacing: '-0.5px', fontFamily: 'DM Sans, sans-serif' }}>
           Catalogue
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <ViewModeToggle value={viewMode} onChange={setViewMode} />
-          <select
-            value={library}
-            onChange={e => { setLibrary(e.target.value as LibraryKey); scheduleCloudSave() }}
-            style={{
-              fontSize: '11px', fontWeight: 600,
-              padding: '5px 10px',
-              borderRadius: '20px',
-              border: '1.5px solid var(--border)',
-              background: 'var(--tab-inactive-bg)',
-              color: 'var(--text-2)',
-              cursor: 'pointer',
-              fontFamily: 'DM Sans, sans-serif',
-              outline: 'none',
-            }}
-          >
-            {LIBRARY_OPTIONS.map(o => (
-              <option key={o.key} value={o.key}>{o.label}</option>
-            ))}
-          </select>
-        </div>
+        <select
+          value={library}
+          onChange={e => { setLibrary(e.target.value as LibraryKey); scheduleCloudSave() }}
+          style={{
+            fontSize: '11px', fontWeight: 600,
+            padding: '5px 10px',
+            borderRadius: '20px',
+            border: '1.5px solid var(--border)',
+            background: 'var(--tab-inactive-bg)',
+            color: 'var(--text-2)',
+            cursor: 'pointer',
+            fontFamily: 'DM Sans, sans-serif',
+            outline: 'none',
+          }}
+        >
+          {LIBRARY_OPTIONS.map(o => (
+            <option key={o.key} value={o.key}>{o.label}</option>
+          ))}
+        </select>
       </div>
 
       {/* Top zone: filter pills + search */}
@@ -503,6 +500,10 @@ export default function CataloguePage() {
                 ×
               </button>
             </div>
+            <div style={{ padding: '0 20px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border)' }}>
+              <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-2)' }}>Vue des résultats</span>
+              <ViewModeToggle value={viewMode} onChange={setViewMode} />
+            </div>
             <div style={{ overflowY: 'auto', padding: '0 12px 24px' }}>
               {orderedPresets.map((p, idx) => (
                 <div key={p.id} style={{
@@ -678,7 +679,6 @@ function CatalogCard({ item, onAddToList, viewMode }: { item: CatalogueItem; onA
     : 'var(--border)'
 
   const typeConf = TYPE_CONFIG[item.type]
-  const badge = typeBadge(item.type, item.subject)
 
   return (
     <div
@@ -717,18 +717,9 @@ function CatalogCard({ item, onAddToList, viewMode }: { item: CatalogueItem; onA
           <div style={{ fontSize: '13.5px', fontWeight: 700, color: 'var(--color-heading)', lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0 }}>
             {item.title}
           </div>
-          {viewMode === 'badges' && badge && (
-            <span style={{
-              fontSize: '9px', fontWeight: 700, padding: '2px 6px',
-              borderRadius: '20px', background: 'var(--tab-inactive-bg)',
-              color: 'var(--text-2)', whiteSpace: 'nowrap', flexShrink: 0,
-            }}>
-              {badge}
-            </span>
-          )}
         </div>
         <div style={{ display: 'flex', gap: '5px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '2px' }}>
-          {item.type && viewMode !== 'badges' && (
+          {item.type && viewMode !== 'dots' && (
             <span style={{
               fontSize: '9px', fontWeight: 700, padding: '2px 6px',
               borderRadius: '20px', background: 'var(--tab-inactive-bg)',
