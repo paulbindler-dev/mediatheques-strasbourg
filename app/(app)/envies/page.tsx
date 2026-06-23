@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
-import { Trash2 } from 'lucide-react'
+import { Trash2, SlidersHorizontal, Eye, EyeOff, ChevronUp, ChevronDown } from 'lucide-react'
 import CoverImg from '@/components/CoverImg'
 import { ViewModeToggle, type ViewMode, TYPE_CONFIG, typeBadge } from '@/components/ViewModeToggle'
 import type { CatalogueItem } from '@/app/api/catalogue/search/route'
@@ -416,7 +416,7 @@ export default function EnviesPage() {
             }}
             title="Gérer les listes"
           >
-            ⚙
+            <SlidersHorizontal size={13} strokeWidth={2} />
           </button>
         </div>
 
@@ -634,9 +634,9 @@ export default function EnviesPage() {
                   <button
                     onClick={() => toggleListVisibility(list.id)}
                     title={list.hidden ? 'Afficher' : 'Masquer'}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px', padding: '2px', flexShrink: 0, color: list.hidden ? 'var(--text-2)' : 'var(--navy)' }}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', flexShrink: 0, color: list.hidden ? 'var(--text-2)' : 'var(--navy)', display: 'flex', alignItems: 'center' }}
                   >
-                    {list.hidden ? '🚫' : '👁'}
+                    {list.hidden ? <EyeOff size={16} strokeWidth={2} /> : <Eye size={16} strokeWidth={2} />}
                   </button>
                   <span style={{ fontSize: '16px', flexShrink: 0 }}>{list.icon}</span>
                   <span style={{ flex: 1, fontSize: '13px', fontWeight: 600, color: 'var(--color-heading)' }}>
@@ -648,9 +648,11 @@ export default function EnviesPage() {
                   </span>
                   <div style={{ display: 'flex', gap: '2px', flexShrink: 0 }}>
                     <button onClick={() => moveList(list.id, 'up')} disabled={idx === 0}
-                      style={{ width: '28px', height: '28px', borderRadius: '6px', background: idx === 0 ? 'transparent' : 'var(--tab-inactive-bg)', border: 'none', cursor: idx === 0 ? 'default' : 'pointer', color: idx === 0 ? 'transparent' : 'var(--text-2)', fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>↑</button>
+                      style={{ width: '28px', height: '28px', borderRadius: '6px', background: idx === 0 ? 'transparent' : 'var(--tab-inactive-bg)', border: 'none', cursor: idx === 0 ? 'default' : 'pointer', color: idx === 0 ? 'transparent' : 'var(--text-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <ChevronUp size={14} strokeWidth={2} /></button>
                     <button onClick={() => moveList(list.id, 'down')} disabled={idx === store.lists.length - 1}
-                      style={{ width: '28px', height: '28px', borderRadius: '6px', background: idx === store.lists.length - 1 ? 'transparent' : 'var(--tab-inactive-bg)', border: 'none', cursor: idx === store.lists.length - 1 ? 'default' : 'pointer', color: idx === store.lists.length - 1 ? 'transparent' : 'var(--text-2)', fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>↓</button>
+                      style={{ width: '28px', height: '28px', borderRadius: '6px', background: idx === store.lists.length - 1 ? 'transparent' : 'var(--tab-inactive-bg)', border: 'none', cursor: idx === store.lists.length - 1 ? 'default' : 'pointer', color: idx === store.lists.length - 1 ? 'transparent' : 'var(--text-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <ChevronDown size={14} strokeWidth={2} /></button>
                   </div>
                   <button
                     onClick={() => { setShowManageModal(false); setDeleteConfirmId(list.id) }}
