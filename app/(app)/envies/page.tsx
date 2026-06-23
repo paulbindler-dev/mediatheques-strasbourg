@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Trash2, SlidersHorizontal, Eye, EyeOff, ChevronUp, ChevronDown } from 'lucide-react'
 import CoverImg from '@/components/CoverImg'
-import { ViewModeToggle, type ViewMode, TYPE_CONFIG, typeBadge } from '@/components/ViewModeToggle'
+import { ViewModeToggle, type ViewMode, TYPE_CONFIG } from '@/components/ViewModeToggle'
 import type { CatalogueItem } from '@/app/api/catalogue/search/route'
 import {
   loadStore, saveStore, addItem, removeItem, updateItem,
@@ -81,7 +81,7 @@ export default function EnviesPage() {
   const [newListIcon, setNewListIcon] = useState('⭐')
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
   const [showManageModal, setShowManageModal] = useState(false)
-  const [viewMode, setViewMode] = useState<ViewMode>('badges')
+  const [viewMode, setViewMode] = useState<ViewMode>('dots')
   const cloudSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const cloudDirty = useRef(false)
 
@@ -341,24 +341,21 @@ export default function EnviesPage() {
         <div style={{ fontSize: '22px', fontWeight: 800, color: 'var(--color-heading)', letterSpacing: '-0.5px', fontFamily: 'DM Sans, sans-serif' }}>
           Mes listes
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <ViewModeToggle value={viewMode} onChange={setViewMode} />
-          <select
-            value={store.defaultLibrary}
-            onChange={e => setLibrary(e.target.value as LibraryKey)}
-            style={{
-              fontSize: '11px', fontWeight: 600,
-              padding: '5px 10px', borderRadius: '20px',
-              border: '1.5px solid var(--border)',
-              background: 'var(--tab-inactive-bg)', color: 'var(--text-2)',
-              cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', outline: 'none',
-            }}
-          >
-            {LIBRARY_OPTIONS.map(o => (
-              <option key={o.key} value={o.key}>{o.label}</option>
-            ))}
-          </select>
-        </div>
+        <select
+          value={store.defaultLibrary}
+          onChange={e => setLibrary(e.target.value as LibraryKey)}
+          style={{
+            fontSize: '11px', fontWeight: 600,
+            padding: '5px 10px', borderRadius: '20px',
+            border: '1.5px solid var(--border)',
+            background: 'var(--tab-inactive-bg)', color: 'var(--text-2)',
+            cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', outline: 'none',
+          }}
+        >
+          {LIBRARY_OPTIONS.map(o => (
+            <option key={o.key} value={o.key}>{o.label}</option>
+          ))}
+        </select>
       </div>
 
       {/* Top zone: list pills + search */}
@@ -624,6 +621,10 @@ export default function EnviesPage() {
                 ×
               </button>
             </div>
+            <div style={{ padding: '0 20px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border)' }}>
+              <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-2)' }}>Vue des items</span>
+              <ViewModeToggle value={viewMode} onChange={setViewMode} />
+            </div>
             <div style={{ overflowY: 'auto', padding: '0 12px 24px' }}>
               {store.lists.map((list, idx) => (
                 <div key={list.id} style={{
@@ -885,7 +886,6 @@ function ItemCard({
   const typeIcon = TYPE_ICON[docType] ?? '📄'
   const thumbSubject = item.match?.subject ?? ''
   const typeConf = TYPE_CONFIG[docType]
-  const badge = typeBadge(docType, item.match?.subject ?? '')
 
   const url = item.match?.url ?? null
 
@@ -1013,19 +1013,8 @@ function ItemCard({
 
         {/* Text content */}
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-heading)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0 }}>
-              {item.title}
-            </div>
-            {viewMode === 'badges' && badge && (
-              <span style={{
-                fontSize: '9px', fontWeight: 700, padding: '2px 6px',
-                borderRadius: '20px', background: 'var(--tab-inactive-bg)',
-                color: 'var(--text-2)', whiteSpace: 'nowrap', flexShrink: 0,
-              }}>
-                {badge}
-              </span>
-            )}
+          <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-heading)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {item.title}
           </div>
           {subtitleNode && (
             <div style={{ fontSize: '12px', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
