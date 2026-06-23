@@ -682,6 +682,7 @@ function CatalogCard({ item, onAddToList, viewMode }: { item: CatalogueItem; onA
     : 'var(--border)'
 
   const typeConf = TYPE_CONFIG[item.type]
+  const subtitle = [item.publisher, item.year].filter(Boolean).join(' · ')
 
   return (
     <div
@@ -689,40 +690,40 @@ function CatalogCard({ item, onAddToList, viewMode }: { item: CatalogueItem; onA
       style={{
         background: 'var(--surface)', borderRadius: 'var(--radius-sm)',
         border: '1px solid var(--border)',
-        display: 'flex', alignItems: 'center',
+        display: 'flex', alignItems: 'center', gap: '10px',
+        padding: '9px 14px',
         cursor: item.url ? 'pointer' : 'default',
-        overflow: 'hidden',
       }}
     >
+      {/* Status dot */}
+      <div style={{
+        width: '7px', height: '7px', borderRadius: '50%', flexShrink: 0,
+        background: dotColor,
+        animation: avail === 'checking' ? 'pulse 1s infinite' : 'none',
+      }} />
+
       {/* Vignette — images or icons mode */}
       {viewMode === 'images' && (
-        <CoverImg thumbnail={item.thumbnail} width={44} height={63} typeIcon={icon} subject={item.subject} borderRadius={0} />
+        <CoverImg thumbnail={item.thumbnail} width={36} height={52} typeIcon={icon} subject={item.subject} />
       )}
       {viewMode === 'icons' && (
         <div style={{
-          width: 44, height: 63, flexShrink: 0,
+          width: 36, height: 52, flexShrink: 0, borderRadius: 5,
           background: typeConf?.bg ?? 'var(--tab-inactive-bg)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 22,
+          fontSize: 18,
         }}>
           {typeConf?.emoji ?? icon}
         </div>
       )}
 
       {/* Content */}
-      <div style={{ flex: 1, minWidth: 0, padding: '10px 12px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '3px' }}>
-          <div style={{
-            width: '7px', height: '7px', borderRadius: '50%', flexShrink: 0,
-            background: dotColor,
-            animation: avail === 'checking' ? 'pulse 1s infinite' : 'none',
-          }} />
-          <div style={{ fontSize: '13.5px', fontWeight: 700, color: 'var(--color-heading)', lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0 }}>
-            {item.title}
-          </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-heading)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {item.title}
         </div>
-        <div style={{ display: 'flex', gap: '5px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '2px' }}>
-          {item.type && viewMode !== 'dots' && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '3px', overflow: 'hidden' }}>
+          {item.type && (
             <span style={{
               fontSize: '9px', fontWeight: 700, padding: '2px 6px',
               borderRadius: '20px', background: 'var(--tab-inactive-bg)',
@@ -731,31 +732,27 @@ function CatalogCard({ item, onAddToList, viewMode }: { item: CatalogueItem; onA
               {item.type}
             </span>
           )}
-          {item.publisher && <span style={{ fontSize: '11px', color: 'var(--text-2)' }}>{item.publisher}</span>}
-          {item.year && <span style={{ fontSize: '11px', color: 'var(--text-2)' }}>{item.year}</span>}
+          {subtitle && (
+            <span style={{ fontSize: '11px', color: 'var(--text-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {subtitle}
+            </span>
+          )}
         </div>
-        {item.desc && (
-          <div style={{ fontSize: '11px', color: 'var(--text-2)', lineHeight: 1.5, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const }}>
-            {item.desc}
-          </div>
-        )}
       </div>
 
       {/* + Liste button */}
-      <div style={{ flexShrink: 0, padding: '0 12px', display: 'flex', alignItems: 'center' }}>
-        <button
-          onClick={e => { e.stopPropagation(); onAddToList() }}
-          style={{
-            background: 'var(--navy)', color: 'white',
-            border: 'none', borderRadius: '20px',
-            padding: '8px 14px', fontSize: '12px', fontWeight: 700,
-            cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', whiteSpace: 'nowrap',
-            minHeight: '36px',
-          }}
-        >
-          + Liste
-        </button>
-      </div>
+      <button
+        onClick={e => { e.stopPropagation(); onAddToList() }}
+        style={{
+          background: 'var(--navy)', color: 'white',
+          border: 'none', borderRadius: '20px',
+          padding: '8px 14px', fontSize: '12px', fontWeight: 700,
+          cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', whiteSpace: 'nowrap',
+          minHeight: '36px', flexShrink: 0,
+        }}
+      >
+        + Liste
+      </button>
     </div>
   )
 }
