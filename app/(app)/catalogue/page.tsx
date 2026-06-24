@@ -165,8 +165,9 @@ export default function CataloguePage() {
   }
 
   useEffect(() => {
-    const saved = localStorage.getItem('catalogue_view_mode') as ViewMode | null
-    if (saved) setViewMode(saved)
+    const saved = localStorage.getItem('catalogue_view_mode')
+    if (saved === 'icons') setViewMode('images')
+    else if (saved === 'images' || saved === 'dots') setViewMode(saved as ViewMode)
   }, [])
 
   useEffect(() => {
@@ -702,19 +703,9 @@ function CatalogCard({ item, onAddToList, viewMode }: { item: CatalogueItem; onA
         animation: avail === 'checking' ? 'pulse 1s infinite' : 'none',
       }} />
 
-      {/* Vignette — images or icons mode */}
+      {/* Vignette — cover si disponible, tuile TYPE_CONFIG sinon */}
       {viewMode === 'images' && (
-        <CoverImg thumbnail={item.thumbnail} width={36} height={52} typeIcon={icon} subject={item.subject} />
-      )}
-      {viewMode === 'icons' && (
-        <div style={{
-          width: 36, height: 52, flexShrink: 0, borderRadius: 5,
-          background: typeConf?.bg ?? 'var(--tab-inactive-bg)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 18,
-        }}>
-          {typeConf?.emoji ?? icon}
-        </div>
+        <CoverImg thumbnail={item.thumbnail} width={36} height={52} typeIcon={typeConf?.emoji ?? icon} subject={item.subject} typeBg={typeConf?.bg} />
       )}
 
       {/* Content */}
@@ -722,7 +713,7 @@ function CatalogCard({ item, onAddToList, viewMode }: { item: CatalogueItem; onA
         <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-heading)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {item.title}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '3px', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '2px', overflow: 'hidden' }}>
           {item.type && (
             <span style={{
               fontSize: '9px', fontWeight: 700, padding: '2px 6px',
@@ -733,7 +724,7 @@ function CatalogCard({ item, onAddToList, viewMode }: { item: CatalogueItem; onA
             </span>
           )}
           {subtitle && (
-            <span style={{ fontSize: '11px', color: 'var(--text-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <span style={{ fontSize: '12px', color: 'var(--text-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {subtitle}
             </span>
           )}
