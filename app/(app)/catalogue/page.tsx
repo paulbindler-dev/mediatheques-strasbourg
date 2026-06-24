@@ -293,7 +293,7 @@ export default function CataloguePage() {
         flexShrink: 0,
       }}>
         <div
-          onClick={() => setViewMode(m => ({ dots: 'icons', icons: 'images', images: 'dots' } as Record<ViewMode, ViewMode>)[m])}
+          onClick={() => setViewMode(m => (m === 'dots' ? 'images' : 'dots'))}
           style={{ fontSize: '22px', fontWeight: 800, color: 'var(--color-heading)', letterSpacing: '-0.5px', fontFamily: 'DM Sans, sans-serif', cursor: 'pointer', userSelect: 'none' }}
         >
           Catalogue
