@@ -1,5 +1,6 @@
 import StatusBadge from './StatusBadge'
 import { parseIguanaDate, formatDate, getDaysUntil, type IguanaLoan } from '@/lib/iguana'
+import { typeBadge } from './ViewModeToggle'
 
 export default function LoanCard({ l }: { l: IguanaLoan }) {
   const dueDate = parseIguanaDate(l.WhenBack)
@@ -15,9 +16,11 @@ export default function LoanCard({ l }: { l: IguanaLoan }) {
 
   const thumb = l.ThumbnailUrl || l.DefaultThumbnailUrl
   const isNeudorf = (l.Location ?? '').toLowerCase().includes('neudorf')
+  const dotColor = variant === 'green' ? 'var(--green)' : variant === 'red' ? 'var(--red)' : 'var(--border)'
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 14px' }}>
+      <div style={{ width: '7px', height: '7px', borderRadius: '50%', flexShrink: 0, background: dotColor }} />
       <img
         src={thumb}
         onError={e => { (e.target as HTMLImageElement).src = l.DefaultThumbnailUrl }}
@@ -28,15 +31,17 @@ export default function LoanCard({ l }: { l: IguanaLoan }) {
         <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-heading)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', letterSpacing: '-0.2px' }}>
           {l.Title}
         </div>
-        <div style={{ fontSize: '10px', color: 'var(--text-2)', marginTop: '2px' }}>
-          {l.TypeOfDocument}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '2px', overflow: 'hidden' }}>
+          <span style={{ fontSize: '9px', fontWeight: 700, padding: '2px 6px', borderRadius: '20px', background: 'var(--tab-inactive-bg)', color: 'var(--text-2)', whiteSpace: 'nowrap', flexShrink: 0 }}>
+            {typeBadge(l.TypeOfDocument ?? '', '')}
+          </span>
           {l.Location && (
-            <> · <span style={isNeudorf ? { color: 'var(--neudorf)', fontWeight: 600 } : undefined}>
+            <span style={{ fontSize: '12px', color: isNeudorf ? 'var(--neudorf)' : 'var(--text-2)', fontWeight: isNeudorf ? 700 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {l.Location}
-            </span></>
+            </span>
           )}
         </div>
-        <div style={{ marginTop: '7px' }}>
+        <div style={{ marginTop: '6px' }}>
           <StatusBadge variant={variant} label={label} />
         </div>
       </div>
