@@ -1,20 +1,12 @@
 'use client'
 
-export type ViewMode = 'images' | 'icons' | 'dots'
+export type ViewMode = 'images' | 'dots'
 
 const SVG_IMAGES = (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
     <rect x="3" y="3" width="18" height="18" rx="2"/>
     <circle cx="8.5" cy="8.5" r="1.5"/>
     <polyline points="21 15 16 10 5 21"/>
-  </svg>
-)
-const SVG_ICONS = (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="3" y="3" width="7" height="7" rx="1.5"/>
-    <rect x="14" y="3" width="7" height="7" rx="1.5"/>
-    <rect x="3" y="14" width="7" height="7" rx="1.5"/>
-    <rect x="14" y="14" width="7" height="7" rx="1.5"/>
   </svg>
 )
 const SVG_BADGES = (
@@ -29,9 +21,8 @@ const SVG_BADGES = (
 )
 
 const MODES: { key: ViewMode; title: string; icon: React.ReactNode }[] = [
-  { key: 'images',  title: 'Images',  icon: SVG_IMAGES },
-  { key: 'icons',   title: 'Icônes',  icon: SVG_ICONS },
-  { key: 'dots',    title: 'Points',  icon: SVG_BADGES },
+  { key: 'images', title: 'Vignette', icon: SVG_IMAGES },
+  { key: 'dots',   title: 'Points',   icon: SVG_BADGES },
 ]
 
 export function ViewModeToggle({ value, onChange }: {

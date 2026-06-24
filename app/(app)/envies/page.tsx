@@ -94,8 +94,9 @@ export default function EnviesPage() {
   const checkAllRef = useRef<() => void>(() => {})
 
   useEffect(() => {
-    const saved = localStorage.getItem('listes_view_mode') as ViewMode | null
-    if (saved) setViewMode(saved)
+    const saved = localStorage.getItem('listes_view_mode')
+    if (saved === 'icons') setViewMode('images')
+    else if (saved === 'images' || saved === 'dots') setViewMode(saved as ViewMode)
   }, [])
 
   useEffect(() => {
@@ -989,7 +990,7 @@ function ItemCard({
           background: 'var(--surface)',
           transform: `translateX(${swipeX}px)`,
           transition: animating && !reducedMotion ? 'transform 0.2s cubic-bezier(0.25, 0, 0, 1)' : 'none',
-          willChange: 'transform',
+          willChange: swipeX !== 0 || animating ? 'transform' : 'auto',
         }}
       >
         {/* Status dot */}
@@ -999,19 +1000,9 @@ function ItemCard({
           animation: isChecking ? 'pulse 1s infinite' : 'none',
         }} />
 
-        {/* Vignette — images or icons mode */}
+        {/* Vignette — cover si disponible, tuile TYPE_CONFIG sinon */}
         {viewMode === 'images' && (
-          <CoverImg thumbnail={item.match?.thumbnail} width={36} height={52} typeIcon={typeIcon} subject={thumbSubject} />
-        )}
-        {viewMode === 'icons' && (
-          <div style={{
-            width: 36, height: 52, flexShrink: 0, borderRadius: 5,
-            background: typeConf?.bg ?? 'var(--tab-inactive-bg)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 18,
-          }}>
-            {typeConf?.emoji ?? typeIcon}
-          </div>
+          <CoverImg thumbnail={item.match?.thumbnail} width={36} height={52} typeIcon={typeConf?.emoji ?? typeIcon} subject={thumbSubject} typeBg={typeConf?.bg} />
         )}
 
         {/* Text content */}
