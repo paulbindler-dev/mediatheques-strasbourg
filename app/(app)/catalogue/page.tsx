@@ -169,7 +169,7 @@ export default function CataloguePage() {
   const [viewMode, setViewMode] = useState<ViewMode>('dots')
   const [inListTitles, setInListTitles] = useState<Set<string>>(() => {
     const s = loadStore()
-    return new Set(s.lists.flatMap(l => l.items.map(i => i.title.toLowerCase())))
+    return new Set(s.items.map(i => i.title.toLowerCase()))
   })
   const dndSensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
