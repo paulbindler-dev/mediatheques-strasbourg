@@ -804,13 +804,13 @@ function CatalogCard({ item, onAddToList, viewMode, isInList }: { item: Catalogu
           }}>
             {item.title}
           </div>
-          {item.creator && (
+          {(item.creator || item.year) && (
             <div style={{
               fontSize: viewMode === 'grid3' ? '9.5px' : '10.5px',
               color: 'var(--text-2)', marginTop: '2px',
               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             }}>
-              {item.creator}
+              {[item.creator, item.year].filter(Boolean).join(' · ')}
             </div>
           )}
         </div>
