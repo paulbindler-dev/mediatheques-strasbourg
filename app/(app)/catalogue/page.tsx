@@ -239,7 +239,19 @@ export default function CataloguePage() {
     const saved = localStorage.getItem('catalogue_view_mode')
     if (saved === 'icons' || saved === 'images') setViewMode('list')
     else if (['dots', 'list', 'grid2', 'grid3'].includes(saved ?? '')) setViewMode(saved as ViewMode)
+    const savedSearch = localStorage.getItem('catalogue_search_state')
+    if (savedSearch) {
+      try {
+        const { input: si, preset: sp } = JSON.parse(savedSearch) as { input?: string; preset?: string }
+        if (si) setInput(si)
+        if (sp) setPreset(sp)
+      } catch { /* ignore */ }
+    }
   }, [])
+
+  useEffect(() => {
+    localStorage.setItem('catalogue_search_state', JSON.stringify({ input, preset }))
+  }, [input, preset])
 
   useEffect(() => {
     localStorage.setItem('catalogue_view_mode', viewMode)
@@ -522,7 +534,7 @@ export default function CataloguePage() {
             </div>
             <div style={
               viewMode === 'grid2' || viewMode === 'grid3'
-                ? { display: 'grid', gridTemplateColumns: viewMode === 'grid3' ? '1fr 1fr 1fr' : '1fr 1fr', gap: viewMode === 'grid3' ? '8px' : '10px' }
+                ? { display: 'grid', gridTemplateColumns: viewMode === 'grid3' ? '1fr 1fr 1fr' : '1fr 1fr', gap: viewMode === 'grid3' ? '8px' : '10px', alignItems: 'start' }
                 : { display: 'flex', flexDirection: 'column', gap: '8px' }
             }>
               {results.map(item => (
@@ -746,7 +758,7 @@ function CatalogCard({ item, onAddToList, viewMode }: { item: CatalogueItem; onA
     return (
       <div
         onClick={() => item.url && window.open(item.url, '_blank', 'noopener,noreferrer')}
-        style={{ cursor: item.url ? 'pointer' : 'default' }}
+        style={{ cursor: item.url ? 'pointer' : 'default', minWidth: 0, overflow: 'hidden' }}
       >
         <div style={{ position: 'relative', aspectRatio: '2/3', borderRadius: 'var(--radius-sm)', overflow: 'hidden', background: typeConf?.bg ?? 'var(--tab-inactive-bg)' }}>
           {item.thumbnail && !imgFailed ? (
