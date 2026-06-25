@@ -1,6 +1,15 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
-import { Trash2, SlidersHorizontal, Eye, EyeOff, ChevronUp, ChevronDown } from 'lucide-react'
+import { Trash2, SlidersHorizontal, Eye, EyeOff } from 'lucide-react'
+import {
+  DndContext, closestCenter, PointerSensor, TouchSensor,
+  useSensor, useSensors, type DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  SortableContext, verticalListSortingStrategy,
+  useSortable, arrayMove,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import CoverImg from '@/components/CoverImg'
 import { ViewModeToggle, type ViewMode, TYPE_CONFIG, typeBadge } from '@/components/ViewModeToggle'
 import type { CatalogueItem } from '@/app/api/catalogue/search/route'
@@ -71,6 +80,70 @@ function migrateOldData(store: WishlistStore): WishlistStore {
   }
 }
 
+const DragHandle = () => (
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ display: 'block' }}>
+    {[0, 1, 2].map(row => [0, 1].map(col => (
+      <circle key={`${row}-${col}`} cx={4 + col * 8} cy={4 + row * 4} r={1.5} fill="currentColor" />
+    )))}
+  </svg>
+)
+
+type SortableListRowData = {
+  id: string
+  name: string
+  icon: string
+  hidden?: boolean
+  itemCount: number
+}
+
+function SortableListRow({
+  list, onToggleVisibility, onDelete,
+}: {
+  list: SortableListRowData
+  onToggleVisibility: () => void
+  onDelete: () => void
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: list.id })
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        display: 'flex', alignItems: 'center', gap: '10px',
+        padding: '10px 8px', borderRadius: 'var(--radius-sm)',
+        opacity: isDragging ? 0.5 : list.hidden ? 0.4 : 1,
+        transition: `opacity 0.15s, ${transition ?? ''}`,
+        transform: CSS.Transform.toString(transform),
+        zIndex: isDragging ? 1 : undefined,
+        background: isDragging ? 'var(--bg)' : undefined,
+      }}
+    >
+      <button
+        onClick={onToggleVisibility}
+        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', flexShrink: 0, color: list.hidden ? 'var(--text-2)' : 'var(--navy)', display: 'flex', alignItems: 'center' }}
+      >
+        {list.hidden ? <EyeOff size={16} strokeWidth={2} /> : <Eye size={16} strokeWidth={2} />}
+      </button>
+      <span style={{ fontSize: '16px', flexShrink: 0 }}>{list.icon}</span>
+      <span style={{ flex: 1, fontSize: '13px', fontWeight: 600, color: 'var(--color-heading)' }}>
+        {list.name}
+        {list.itemCount > 0 && <span style={{ fontWeight: 400, color: 'var(--text-2)', marginLeft: '6px' }}>{list.itemCount}</span>}
+      </span>
+      <button
+        {...attributes}
+        {...listeners}
+        style={{ background: 'none', border: 'none', cursor: 'grab', padding: '6px', color: 'var(--text-2)', display: 'flex', alignItems: 'center', flexShrink: 0, touchAction: 'none' }}
+      >
+        <DragHandle />
+      </button>
+      <button
+        onClick={onDelete}
+        style={{ width: '28px', height: '28px', borderRadius: '6px', background: 'var(--error-bg)', border: 'none', cursor: 'pointer', color: 'var(--red)', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        title="Supprimer"
+      >×</button>
+    </div>
+  )
+}
+
 export default function EnviesPage() {
   const [store, setStore] = useState<WishlistStore>(() => ({ lists: DEFAULT_LISTS, items: [], defaultLibrary: 'malraux_neudorf' }))
   const [activeList, setActiveList] = useState<string>('jeux')
@@ -82,6 +155,10 @@ export default function EnviesPage() {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
   const [showManageModal, setShowManageModal] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>('dots')
+  const dndSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } }),
+  )
   const cloudSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const cloudDirty = useRef(false)
 
@@ -259,15 +336,13 @@ export default function EnviesPage() {
     }))
   }
 
-  function moveList(id: string, direction: 'up' | 'down') {
+  function reorderLists(activeId: string, overId: string) {
     mutate(s => {
       const lists = [...s.lists]
-      const idx = lists.findIndex(l => l.id === id)
-      if (idx === -1) return s
-      const swapIdx = direction === 'up' ? idx - 1 : idx + 1
-      if (swapIdx < 0 || swapIdx >= lists.length) return s
-      ;[lists[idx], lists[swapIdx]] = [lists[swapIdx], lists[idx]]
-      return { ...s, lists }
+      const from = lists.findIndex(l => l.id === activeId)
+      const to = lists.findIndex(l => l.id === overId)
+      if (from === -1 || to === -1) return s
+      return { ...s, lists: arrayMove(lists, from, to) }
     })
   }
 
@@ -632,42 +707,25 @@ export default function EnviesPage() {
               <ViewModeToggle value={viewMode} onChange={setViewMode} />
             </div>
             <div style={{ overflowY: 'auto', padding: '0 12px 24px' }}>
-              {store.lists.map((list, idx) => (
-                <div key={list.id} style={{
-                  display: 'flex', alignItems: 'center', gap: '10px',
-                  padding: '10px 8px', borderRadius: 'var(--radius-sm)',
-                  opacity: list.hidden ? 0.4 : 1, transition: 'opacity 0.15s',
-                }}>
-                  <button
-                    onClick={() => toggleListVisibility(list.id)}
-                    title={list.hidden ? 'Afficher' : 'Masquer'}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', flexShrink: 0, color: list.hidden ? 'var(--text-2)' : 'var(--navy)', display: 'flex', alignItems: 'center' }}
-                  >
-                    {list.hidden ? <EyeOff size={16} strokeWidth={2} /> : <Eye size={16} strokeWidth={2} />}
-                  </button>
-                  <span style={{ fontSize: '16px', flexShrink: 0 }}>{list.icon}</span>
-                  <span style={{ flex: 1, fontSize: '13px', fontWeight: 600, color: 'var(--color-heading)' }}>
-                    {list.name}
-                    {(() => {
-                      const cnt = store.items.filter(i => i.listId === list.id).length
-                      return cnt > 0 ? <span style={{ fontWeight: 400, color: 'var(--text-2)', marginLeft: '6px' }}>{cnt}</span> : null
-                    })()}
-                  </span>
-                  <div style={{ display: 'flex', gap: '2px', flexShrink: 0 }}>
-                    <button onClick={() => moveList(list.id, 'up')} disabled={idx === 0}
-                      style={{ width: '28px', height: '28px', borderRadius: '6px', background: idx === 0 ? 'transparent' : 'var(--tab-inactive-bg)', border: 'none', cursor: idx === 0 ? 'default' : 'pointer', color: idx === 0 ? 'transparent' : 'var(--text-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <ChevronUp size={14} strokeWidth={2} /></button>
-                    <button onClick={() => moveList(list.id, 'down')} disabled={idx === store.lists.length - 1}
-                      style={{ width: '28px', height: '28px', borderRadius: '6px', background: idx === store.lists.length - 1 ? 'transparent' : 'var(--tab-inactive-bg)', border: 'none', cursor: idx === store.lists.length - 1 ? 'default' : 'pointer', color: idx === store.lists.length - 1 ? 'transparent' : 'var(--text-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <ChevronDown size={14} strokeWidth={2} /></button>
-                  </div>
-                  <button
-                    onClick={() => { setShowManageModal(false); setDeleteConfirmId(list.id) }}
-                    style={{ width: '28px', height: '28px', borderRadius: '6px', background: 'var(--error-bg)', border: 'none', cursor: 'pointer', color: 'var(--red)', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                    title="Supprimer"
-                  >×</button>
-                </div>
-              ))}
+              <DndContext
+                sensors={dndSensors}
+                collisionDetection={closestCenter}
+                onDragEnd={(e: DragEndEvent) => {
+                  const { active, over } = e
+                  if (over && active.id !== over.id) reorderLists(String(active.id), String(over.id))
+                }}
+              >
+                <SortableContext items={store.lists.map(l => l.id)} strategy={verticalListSortingStrategy}>
+                  {store.lists.map(list => (
+                    <SortableListRow
+                      key={list.id}
+                      list={{ ...list, itemCount: store.items.filter(i => i.listId === list.id).length }}
+                      onToggleVisibility={() => toggleListVisibility(list.id)}
+                      onDelete={() => { setShowManageModal(false); setDeleteConfirmId(list.id) }}
+                    />
+                  ))}
+                </SortableContext>
+              </DndContext>
             </div>
           </div>
         </div>

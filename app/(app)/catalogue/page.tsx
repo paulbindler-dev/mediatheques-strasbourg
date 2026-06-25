@@ -1,6 +1,15 @@
 'use client'
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
-import { SlidersHorizontal, Eye, EyeOff, ChevronUp, ChevronDown } from 'lucide-react'
+import { SlidersHorizontal, Eye, EyeOff } from 'lucide-react'
+import {
+  DndContext, closestCenter, PointerSensor, TouchSensor,
+  useSensor, useSensors, type DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  SortableContext, verticalListSortingStrategy,
+  useSortable, arrayMove,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import type { CatalogueItem } from '@/app/api/catalogue/search/route'
 import CoverImg from '@/components/CoverImg'
 import { ViewModeToggle, type ViewMode, TYPE_CONFIG, typeBadge } from '@/components/ViewModeToggle'
@@ -81,6 +90,63 @@ function saveCustomPresets(p: FilterPreset[]): void {
   localStorage.setItem(CUSTOM_PRESETS_KEY, JSON.stringify(p))
 }
 
+const DragHandle = () => (
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ display: 'block' }}>
+    {[0, 1, 2].map(row => [0, 1].map(col => (
+      <circle key={`${row}-${col}`} cx={4 + col * 8} cy={4 + row * 4} r={1.5} fill="currentColor" />
+    )))}
+  </svg>
+)
+
+type SortablePresetRowProps = {
+  preset: FilterPreset & { hidden?: boolean }
+  onToggleVisibility: () => void
+  onDelete?: () => void
+}
+
+function SortablePresetRow({ preset, onToggleVisibility, onDelete }: SortablePresetRowProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: preset.id })
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        display: 'flex', alignItems: 'center', gap: '10px',
+        padding: '10px 8px', borderRadius: 'var(--radius-sm)',
+        opacity: isDragging ? 0.5 : preset.hidden ? 0.4 : 1,
+        transition: `opacity 0.15s, ${transition ?? ''}`,
+        transform: CSS.Transform.toString(transform),
+        zIndex: isDragging ? 1 : undefined,
+        background: isDragging ? 'var(--bg)' : undefined,
+      }}
+    >
+      <button
+        onClick={onToggleVisibility}
+        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', flexShrink: 0, color: preset.hidden ? 'var(--text-2)' : 'var(--navy)', display: 'flex', alignItems: 'center' }}
+      >
+        {preset.hidden ? <EyeOff size={16} strokeWidth={2} /> : <Eye size={16} strokeWidth={2} />}
+      </button>
+      <span style={{ fontSize: '16px', flexShrink: 0 }}>{preset.icon}</span>
+      <span style={{ flex: 1, fontSize: '13px', fontWeight: 600, color: 'var(--color-heading)' }}>{preset.label}</span>
+      <button
+        {...attributes}
+        {...listeners}
+        style={{ background: 'none', border: 'none', cursor: 'grab', padding: '6px', color: 'var(--text-2)', display: 'flex', alignItems: 'center', flexShrink: 0, touchAction: 'none' }}
+      >
+        <DragHandle />
+      </button>
+      {onDelete ? (
+        <button
+          onClick={onDelete}
+          style={{ width: '28px', height: '28px', borderRadius: '6px', background: 'var(--error-bg)', border: 'none', cursor: 'pointer', color: 'var(--red)', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          title="Supprimer"
+        >×</button>
+      ) : (
+        <div style={{ width: '28px' }} />
+      )}
+    </div>
+  )
+}
+
 export default function CataloguePage() {
   const [preset, setPreset] = useState<string>('all')
   const [customPresets, setCustomPresets] = useState<FilterPreset[]>([])
@@ -100,6 +166,10 @@ export default function CataloguePage() {
   const [showManagePresets, setShowManagePresets] = useState(false)
   const [presetsState, setPresetsState] = useState<PresetsState>({ hiddenIds: [], orderedIds: [] })
   const [viewMode, setViewMode] = useState<ViewMode>('dots')
+  const dndSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } }),
+  )
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const cloudSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const cloudLoaded = useRef(false)
@@ -136,15 +206,13 @@ export default function CataloguePage() {
     }))
   }
 
-  function movePreset(id: string, direction: 'up' | 'down') {
+  function reorderPresets(activeId: string, overId: string) {
     mutatePresetsState(s => {
       const ids = s.orderedIds.length > 0 ? [...s.orderedIds] : orderedPresets.map(p => p.id)
-      const idx = ids.indexOf(id)
-      if (idx === -1) return s
-      const swapIdx = direction === 'up' ? idx - 1 : idx + 1
-      if (swapIdx < 0 || swapIdx >= ids.length) return s
-      ;[ids[idx], ids[swapIdx]] = [ids[swapIdx], ids[idx]]
-      return { ...s, orderedIds: ids }
+      const from = ids.indexOf(activeId)
+      const to = ids.indexOf(overId)
+      if (from === -1 || to === -1) return s
+      return { ...s, orderedIds: arrayMove(ids, from, to) }
     })
   }
 
@@ -515,40 +583,25 @@ export default function CataloguePage() {
               <ViewModeToggle value={viewMode} onChange={setViewMode} />
             </div>
             <div style={{ overflowY: 'auto', padding: '0 12px 24px' }}>
-              {orderedPresets.map((p, idx) => (
-                <div key={p.id} style={{
-                  display: 'flex', alignItems: 'center', gap: '10px',
-                  padding: '10px 8px', borderRadius: 'var(--radius-sm)',
-                  opacity: p.hidden ? 0.4 : 1, transition: 'opacity 0.15s',
-                }}>
-                  <button
-                    onClick={() => togglePresetVisibility(p.id)}
-                    title={p.hidden ? 'Afficher' : 'Masquer'}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', flexShrink: 0, color: p.hidden ? 'var(--text-2)' : 'var(--navy)', display: 'flex', alignItems: 'center' }}
-                  >
-                    {p.hidden ? <EyeOff size={16} strokeWidth={2} /> : <Eye size={16} strokeWidth={2} />}
-                  </button>
-                  <span style={{ fontSize: '16px', flexShrink: 0 }}>{p.icon}</span>
-                  <span style={{ flex: 1, fontSize: '13px', fontWeight: 600, color: 'var(--color-heading)' }}>{p.label}</span>
-                  <div style={{ display: 'flex', gap: '2px', flexShrink: 0 }}>
-                    <button onClick={() => movePreset(p.id, 'up')} disabled={idx === 0}
-                      style={{ width: '28px', height: '28px', borderRadius: '6px', background: idx === 0 ? 'transparent' : 'var(--tab-inactive-bg)', border: 'none', cursor: idx === 0 ? 'default' : 'pointer', color: idx === 0 ? 'transparent' : 'var(--text-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <ChevronUp size={14} strokeWidth={2} /></button>
-                    <button onClick={() => movePreset(p.id, 'down')} disabled={idx === orderedPresets.length - 1}
-                      style={{ width: '28px', height: '28px', borderRadius: '6px', background: idx === orderedPresets.length - 1 ? 'transparent' : 'var(--tab-inactive-bg)', border: 'none', cursor: idx === orderedPresets.length - 1 ? 'default' : 'pointer', color: idx === orderedPresets.length - 1 ? 'transparent' : 'var(--text-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <ChevronDown size={14} strokeWidth={2} /></button>
-                  </div>
-                  {p.custom ? (
-                    <button
-                      onClick={() => { setShowManagePresets(false); setDeleteConfirmId(p.id) }}
-                      style={{ width: '28px', height: '28px', borderRadius: '6px', background: 'var(--error-bg)', border: 'none', cursor: 'pointer', color: 'var(--red)', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                      title="Supprimer"
-                    >×</button>
-                  ) : (
-                    <div style={{ width: '28px' }} />
-                  )}
-                </div>
-              ))}
+              <DndContext
+                sensors={dndSensors}
+                collisionDetection={closestCenter}
+                onDragEnd={(e: DragEndEvent) => {
+                  const { active, over } = e
+                  if (over && active.id !== over.id) reorderPresets(String(active.id), String(over.id))
+                }}
+              >
+                <SortableContext items={orderedPresets.map(p => p.id)} strategy={verticalListSortingStrategy}>
+                  {orderedPresets.map(p => (
+                    <SortablePresetRow
+                      key={p.id}
+                      preset={p}
+                      onToggleVisibility={() => togglePresetVisibility(p.id)}
+                      onDelete={p.custom ? () => { setShowManagePresets(false); setDeleteConfirmId(p.id) } : undefined}
+                    />
+                  ))}
+                </SortableContext>
+              </DndContext>
             </div>
           </div>
         </div>
