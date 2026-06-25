@@ -810,7 +810,7 @@ function CatalogCard({ item, onAddToList, viewMode, isInList }: { item: Catalogu
               color: 'var(--text-2)', marginTop: '2px',
               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             }}>
-              {[item.creator, item.year].filter(Boolean).join(' · ')}
+              {[typeLabel, item.creator].filter(Boolean).join(' · ')}
             </div>
           )}
         </div>
