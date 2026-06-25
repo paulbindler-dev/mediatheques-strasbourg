@@ -981,7 +981,7 @@ function ItemCard({
             <img
               src={item.match.thumbnail}
               onError={() => setImgFailed(true)}
-              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+              style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
               alt=""
             />
           ) : (
