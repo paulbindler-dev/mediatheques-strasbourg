@@ -105,9 +105,13 @@ async function searchIguana(
     const resource = (r.Resource ?? {}) as Record<string, unknown>
     const rscId = String(resource.RscId ?? '')
     const rawCrtr = typeof resource.Crtr === 'string' ? resource.Crtr : ''
-    // "Nom, Prénom (dates). Rôle. Rôle2" → "Nom, Prénom"
+    // "Nom, Prénom (dates). Rôle" → "Prénom Nom"
     const creator = rawCrtr
-      ? rawCrtr.replace(/\.\s+[A-ZÀÂÇÉÈÊËÎÏÔÙÛÜ].*$/, '').replace(/\s*\([^)]*\)\s*$/, '').trim()
+      ? (() => {
+          const noRole = rawCrtr.replace(/\.\s+[A-ZÀÂÇÉÈÊËÎÏÔÙÛÜ].*$/, '').replace(/\s*\([^)]*\)\s*$/, '').trim()
+          const parts = noRole.split(', ')
+          return parts.length === 2 ? `${parts[1]} ${parts[0]}` : noRole
+        })()
       : undefined
     return {
       rscId,

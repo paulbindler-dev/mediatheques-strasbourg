@@ -268,7 +268,8 @@ export default function EnviesPage() {
           searchLib(LIBRARY_PARAM.malraux),
           searchLib(LIBRARY_PARAM.neudorf),
         ])
-        if (mResult) { match = mResult; foundAt = 'André Malraux' }
+        if (mResult && nResult) { match = mResult; foundAt = 'both' }
+        else if (mResult) { match = mResult; foundAt = 'André Malraux' }
         else if (nResult) { match = nResult; foundAt = 'Neudorf' }
       } else {
         match = await searchLib(LIBRARY_PARAM[library])
@@ -939,7 +940,8 @@ function ItemCard({
   const typeConf = TYPE_CONFIG[docType]
   const typeIcon = typeConf?.emoji ?? TYPE_ICON[docType] ?? '📄'
   const typeLabel = typeBadge(docType, item.match?.subject ?? '')
-  const locLabel = shortLoc(item.foundAt)
+  const isBoth = item.foundAt === 'both'
+  const locLabel = isBoth ? null : shortLoc(item.foundAt)
   const isNeudorf = locLabel === 'Neudorf'
 
   let subtitleNode: React.ReactNode = null
@@ -951,9 +953,11 @@ function ItemCard({
     subtitleNode = (
       <>
         {typeLabel}
-        {locLabel && (
+        {isBoth ? (
+          <> · <span>Malraux</span> · <span style={{ color: 'var(--neudorf)', fontWeight: 700 }}>Neudorf</span></>
+        ) : locLabel ? (
           <> · <span style={{ color: isNeudorf ? 'var(--neudorf)' : 'var(--text-2)', fontWeight: isNeudorf ? 700 : 400 }}>{locLabel}</span></>
-        )}
+        ) : null}
         {isLoaned && item.match.dueDate && (
           <span style={{ color: 'var(--text-2)' }}> · {item.match.dueDate}</span>
         )}
