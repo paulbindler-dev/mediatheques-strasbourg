@@ -40,7 +40,7 @@ export default function BookingCard({ b }: { b: IguanaBooking }) {
       <img
         src={thumb}
         onError={e => { (e.target as HTMLImageElement).src = b.DefaultThumbnailUrl }}
-        style={{ width: '44px', height: '63px', borderRadius: '6px', objectFit: 'contain', background: 'var(--tab-inactive-bg)', flexShrink: 0 }}
+        style={{ width: '44px', height: '63px', borderRadius: '6px', objectFit: 'cover', background: 'var(--tab-inactive-bg)', flexShrink: 0 }}
         alt=""
       />
       <div style={{ flex: 1, minWidth: 0 }}>
