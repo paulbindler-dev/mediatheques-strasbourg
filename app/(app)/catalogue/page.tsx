@@ -24,6 +24,7 @@ type FilterPreset = {
   type: string
   subject: string
   query: string
+  noLocation?: boolean  // for digital types with no physical library association
   custom?: boolean
   hidden?: boolean
 }
@@ -49,7 +50,7 @@ const BUILTIN_PRESETS: FilterPreset[] = [
   { id: 'bd',       label: 'BD',            icon: '📚', type: 'BD ou manga', subject: '', query: '' },
   { id: 'livres',   label: 'Livres',        icon: '📖', type: 'Livre',     subject: '',    query: '' },
   { id: 'musique',  label: 'Musique',       icon: '🎵', type: 'Musique',   subject: '',    query: '' },
-  { id: 'audio',    label: 'Livres audio',  icon: '🎧', type: 'Livre audio numérique', subject: '', query: '' },
+  { id: 'audio',    label: 'Livres audio',  icon: '🎧', type: 'Livre audio numérique', subject: '', query: '', noLocation: true },
 ]
 
 const LIBRARY_OPTIONS: { key: LibraryKey; label: string }[] = [
@@ -303,7 +304,7 @@ export default function CataloguePage() {
       type: currentPreset.type,
       subject: currentPreset.subject,
       query: currentPreset.query,
-      location: LIBRARY_PARAM[library],
+      location: currentPreset.noLocation ? '' : LIBRARY_PARAM[library],
       page: String(page),
       size: String(PAGE_SIZE),
     })
