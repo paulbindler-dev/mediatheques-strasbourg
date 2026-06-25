@@ -17,8 +17,10 @@ export default function LoanCard({ l }: { l: IguanaLoan }) {
   let label = dueDate ? `À rendre le ${formatDate(dueDate)}` : 'En cours'
 
   if (daysLeft !== null) {
-    if (daysLeft < 0) { variant = 'red'; label = 'En retard' }
-    else if (daysLeft <= 2) { variant = 'red'; label = `Dans ${daysLeft}j` }
+    if (daysLeft < 0)      { variant = 'red'; label = 'En retard' }
+    else if (daysLeft === 0) { variant = 'red'; label = "Aujourd'hui" }
+    else if (daysLeft === 1) { variant = 'red'; label = 'Demain' }
+    else if (daysLeft === 2) { variant = 'red'; label = 'Dans 2 jours' }
   }
 
   const thumb = l.ThumbnailUrl || l.DefaultThumbnailUrl

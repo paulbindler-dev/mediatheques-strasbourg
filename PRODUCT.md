@@ -6,29 +6,32 @@ product
 
 ## Users
 
-Paul (notaire, utilisateur principal), utilise l'app en mobilité — téléphone en main à la médiathèque ou depuis le canapé. Recherche rapide, pas de lecture longue. L'app doit répondre en quelques secondes et ne pas nécessiter d'apprentissage.
+Paul Bindler (notaire, ~20 collaborateurs), utilisateur principal exclusif. Usage mobile-first sur iPhone, en mobilité — à la médiathèque, chez lui. Consulte ses prêts/réservations quotidiennement. Exigeant sur le design, habitué aux applications soignées. Modes préférés : grille 3×3 pour le catalogue, liste-image pour les prêts, vue points pour les listes.
 
 ## Product Purpose
 
-PWA mobile-first permettant de consulter ses prêts et réservations aux Médiathèques de Strasbourg, chercher dans le catalogue, et gérer des listes de souhaits avec vérification de disponibilité en temps réel. Remplace les allers-retours sur le site officiel Iguana, difficile d'utilisation sur mobile.
+PWA mobile-first permettant de consulter ses prêts et réservations aux Médiathèques de Strasbourg (Malraux + Neudorf), chercher dans le catalogue Iguana avec filtres de type et localisation, gérer des listes de souhaits multi-catégories (jeux PS5/PS4/Switch, films, BD, livres, musique, livres audio) avec vérification de disponibilité en temps réel, et recevoir des notifications push proactives (réservation disponible, retour imminent). Remplace le site officiel Iguana, difficile d'utilisation sur mobile.
 
 ## Brand Personality
 
-Sobre, fiable, personnel. L'app est un outil quotidien privé — pas une vitrine. Elle doit inspirer confiance (les données viennent de la vraie bibliothèque) et rester discrète : on vient pour trouver un jeu ou un film, pas pour admirer l'interface.
+Sobre, fiable, personnel. Outil quotidien privé — pas une vitrine. Inspire confiance (données live depuis la vraie bibliothèque). Navy comme structure d'ancrage, orange pour l'action, vert pour la disponibilité, bleu Neudorf pour la localisation.
 
 ## Anti-references
 
-- **Site officiel médiathèques.strasbourg.eu** : dense, daté, illisible sur mobile — l'exact opposé de ce qu'on veut
-- **Apps entertainment grand public (Netflix, Spotify)** : trop de hiérarchie visuelle, trop d'images, trop de couleur — ce n'est pas une vitrine de contenu
-- **Fond sombre ou violet** : explicitement rejeté par l'utilisateur
+- **Site officiel médiathèques.strasbourg.eu** : dense, daté, illisible sur mobile
+- **Apps entertainment grand public (Netflix, Spotify)** : trop de hiérarchie visuelle, trop d'images
+- **Fond sombre ou violet** : explicitement rejeté
+- **Direction PAPERBACK / beige / ivoire / sable / warm-tinted** : la bande warm-neutre AI par défaut, à proscrire absolument
+- **SaaS cream ou editorial gray** : aesthetic AI générique
 
 ## Design Principles
 
-1. **Lisibilité d'abord** : l'information (disponible / emprunté / non trouvé) doit être compréhensible en un coup d'œil, sans décoder des icônes abstraites
+1. **Lisibilité d'abord** : statut (disponible / emprunté / non trouvé) compréhensible en un coup d'œil, sans décoder des icônes abstraites
 2. **Confiance par la transparence** : afficher la date de vérification, l'état réel, les erreurs — ne jamais masquer l'incertitude
-3. **Mobile natif** : touch targets généreux, pas de hover-only, pas de tableaux, navigation par onglets en bas
-4. **Sobriété assumée** : une interface qui s'efface derrière le contenu. Les couleurs servent le statut (vert = dispo, orange = emprunté, gris = inconnu), pas la décoration
+3. **Mobile natif** : touch targets ≥44px, navigation par onglets en bas, pas de hover-only, pas de tableaux
+4. **Palette assumée** : navy/orange/green/neudorf-blue — chaque couleur a un rôle fonctionnel précis, pas décoratif
+5. **Persistance de l'intention** : recherches, filtres, préférences de vue survivent aux changements d'onglet
 
 ## Accessibility & Inclusion
 
-WCAG AA minimum. Usage mono-utilisateur donc pas de besoins spécifiques identifiés, mais dark mode natif supporté.
+WCAG AA minimum. Dark mode natif supporté (prefers-color-scheme). Réduction de mouvement respectée (prefers-reduced-motion). Taille de cible 44px sur la majorité des éléments interactifs.

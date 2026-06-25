@@ -31,7 +31,7 @@ export default function LoginPage() {
   return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', background: 'var(--bg)' }}>
       <div style={{ background: 'var(--surface)', borderRadius: 'var(--radius)', padding: '32px', width: '100%', maxWidth: '380px', boxShadow: '0 2px 16px rgba(0,0,0,0.08)' }}>
-        <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--text-2)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px' }}>
+        <div style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-2)', marginBottom: '8px', letterSpacing: '-0.1px' }}>
           Médiathèques · Strasbourg
         </div>
         <h1 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--color-heading)', marginBottom: '24px', letterSpacing: '-0.4px' }}>
@@ -50,7 +50,7 @@ export default function LoginPage() {
             style={{ padding: '12px 14px', borderRadius: 'var(--radius-sm)', border: '1.5px solid var(--border)', fontSize: '14px', fontFamily: 'DM Sans, sans-serif', outline: 'none', background: 'var(--bg)' }}
           />
           {error && (
-            <div style={{ fontSize: '13px', color: 'var(--red)', padding: '8px 12px', background: '#FEF2F2', borderRadius: 'var(--radius-sm)' }}>
+            <div style={{ fontSize: '13px', color: 'var(--red)', padding: '8px 12px', background: 'var(--error-bg)', borderRadius: 'var(--radius-sm)' }}>
               {error}
             </div>
           )}

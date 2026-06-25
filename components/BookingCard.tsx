@@ -58,7 +58,7 @@ export default function BookingCard({ b }: { b: IguanaBooking }) {
           <StatusBadge variant={variant} label={badgeLabel} />
         </div>
         {showUntil && (
-          <div style={{ fontSize: '10px', color: '#16A34A', fontWeight: 500, marginTop: '4px' }}>
+          <div style={{ fontSize: '10px', color: 'var(--badge-green-color)', fontWeight: 500, marginTop: '4px' }}>
             Jusqu&apos;au {formatDate(until!)}
           </div>
         )}

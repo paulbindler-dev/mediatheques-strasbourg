@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getIguanaCookies } from '@/lib/get-iguana-cookies'
+import { fetchHoldings, type HoldingResult } from '@/lib/iguana-holdings'
+
+export type { HoldingResult }
 
 const BASE = 'https://www.mediatheques.strasbourg.eu'
 const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
@@ -36,49 +39,8 @@ async function getWarmCookies(rscId: string): Promise<string> {
   return parts.join('; ')
 }
 
-type IguanaHolding = {
-  IsAvailable: boolean
-  WhenBack: string | null
-  Site: string
-  Statut: string
-}
-
-type GetHoldingsResponse = {
-  success: boolean
-  errors?: { msg: string }[]
-  d?: {
-    Holdings?: IguanaHolding[]
-    ItemHoldingsData?: { Availability: number; HoldingLabel: string | null }
-    [key: string]: unknown
-  }
-}
-
-export type HoldingResult = {
-  available: boolean
-  availableCount: number
-  totalCount: number
-  dueDate: string | null
-  locations: { site: string; available: boolean; whenBack: string | null }[]
-}
-
-function buildCookieHeader(cookies: { ci: string; st: string; extra?: string }): string {
-  let h = `InstanceCI=CUSB=${cookies.ci}; InstanceST=CUSB=${cookies.st}`
-  if (cookies.extra) {
-    try {
-      const jar = JSON.parse(cookies.extra) as Record<string, string>
-      for (const [k, v] of Object.entries(jar)) h += `; ${k}=${v}`
-    } catch { /* ignore */ }
-  }
-  return h
-}
-
-async function fetchGetHoldings(
-  cookieHeader: string,
-  rscId: string,
-  docbase: string,
-): Promise<GetHoldingsResponse | null> {
-  // Correct Ermes body format discovered from portal-front-all.js:
-  // {Record: {RscId, Docbase}} — no id prefix, no BaseName/lang wrapper
+// For the anonymous warm-cookie fallback path (raw cookie string, not patron session object)
+async function fetchHoldingsRaw(cookieHeader: string, rscId: string, docbase: string): Promise<HoldingResult | null> {
   const body = { Record: { RscId: rscId, Docbase: docbase } }
   const res = await fetch(`${BASE}/Portal/Services/ILSClient.svc/GetHoldings`, {
     method: 'POST',
@@ -94,13 +56,11 @@ async function fetchGetHoldings(
     cache: 'no-store',
   })
   if (!res.ok) return null
-  // Force UTF-8 decoding regardless of server's Content-Type charset
   const buffer = await res.arrayBuffer()
   const text = new TextDecoder('utf-8').decode(buffer)
-  try { return JSON.parse(text) as GetHoldingsResponse } catch { return null }
-}
-
-function parseHoldingsResult(json: GetHoldingsResponse): HoldingResult | null {
+  type R = { success: boolean; d?: { Holdings?: { IsAvailable: boolean; WhenBack: string | null; Site: string }[]; ItemHoldingsData?: { Availability: number; HoldingLabel: string | null } } }
+  let json: R
+  try { json = JSON.parse(text) as R } catch { return null }
   if (!json.success || !json.d) return null
   const holdings = json.d.Holdings ?? []
   const itemData = json.d.ItemHoldingsData
@@ -125,15 +85,13 @@ export async function GET(req: NextRequest) {
     // Attempt 1: patron session — fast path (1 DB read + 1 GetHoldings), no HTTP warm-up needed
     const patronCookies = await getIguanaCookies()
     if (patronCookies) {
-      const json1 = await fetchGetHoldings(buildCookieHeader(patronCookies), rscId, docbase)
-      const result1 = json1 ? parseHoldingsResult(json1) : null
+      const result1 = await fetchHoldings(patronCookies, rscId, docbase)
       if (result1) return NextResponse.json(result1 satisfies HoldingResult, { headers: { 'Cache-Control': 'no-store' } })
     }
 
     // Attempt 2: warm anonymous session (fallback — warm-up was already running in parallel)
     const warmCookies = await warmPromise
-    const json2 = await fetchGetHoldings(warmCookies, rscId, docbase)
-    const result2 = json2 ? parseHoldingsResult(json2) : null
+    const result2 = await fetchHoldingsRaw(warmCookies, rscId, docbase)
     if (result2) return NextResponse.json(result2 satisfies HoldingResult, { headers: { 'Cache-Control': 'no-store' } })
 
     return NextResponse.json({ error: 'availability unavailable', available: null }, { status: 200 })
