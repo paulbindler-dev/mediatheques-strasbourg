@@ -283,9 +283,22 @@ export default function EnviesPage() {
           if (attempt > 0) await new Promise(r => setTimeout(r, 700))
           try {
             const hRes = await fetch(`/api/catalogue/holdings?rscId=${encodeURIComponent(match.rscId)}`)
-            const h = await hRes.json() as { available?: boolean | null; dueDate?: string | null }
+            const h = await hRes.json() as {
+              available?: boolean | null; dueDate?: string | null
+              locations?: { site: string; available: boolean }[]
+            }
             if (hRes.ok && h.available !== null && h.available !== undefined) {
-              holdAvail = h.available; holdDue = h.dueDate ?? null; break
+              holdAvail = h.available; holdDue = h.dueDate ?? null
+              // Derive per-library foundAt from holdings locations
+              if (h.locations && h.locations.length > 0) {
+                const mAvail = h.locations.some(l => l.site.includes('Malraux') && l.available)
+                const nAvail = h.locations.some(l => l.site.includes('Neudorf') && l.available)
+                if (mAvail && nAvail) foundAt = 'both'
+                else if (mAvail) foundAt = 'André Malraux'
+                else if (nAvail) foundAt = 'Neudorf'
+                // else keep foundAt from search (item exists there, all copies loaned)
+              }
+              break
             }
           } catch { /* retry */ }
         }
