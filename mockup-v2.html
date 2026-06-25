@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Médiathèques — Mockup V2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ─── Tokens ─────────────────────────────────────────────────────── */
+:root {
+  --navy:        #0D1B2A;
+  --orange:      #F97316;
+  --green:       #22C55E;
+  --red:         #EF4444;
+  --neudorf:     #0891B2;
+  --bg:          #F6F7F9;
+  --surface:     #FFFFFF;
+  --border:      #EDEEF1;
+  --text:        #1A2535;
+  --text-2:      #637080;
+  --heading:     #0D1B2A;
+  --chip-bg:     #EDEEF0;
+  --content-bg:  #E4E6EA;
+  --overlay:     rgba(0,0,0,.5);
+  --nav-bg:      rgba(255,255,255,.88);
+  --radius:      12px;
+  --radius-sm:   8px;
+  --nav-h:       64px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg:        #0D1B2A;
+    --surface:   #162232;
+    --border:    #243D56;
+    --text:      #E2EAF2;
+    --text-2:    #8BACC8;
+    --heading:   #E2EAF2;
+    --chip-bg:   #1A2D40;
+    --navy:      #1E4A8A;
+    --content-bg:#0D1B2A;
+    --nav-bg:    rgba(22,34,50,.9);
+  }
+}
+*,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+html,body { height:100%; background:var(--bg); color:var(--text); font-family:'DM Sans',sans-serif; -webkit-font-smoothing:antialiased; }
+button,a,select { font-family:inherit; }
+
+/* ─── Shell ──────────────────────────────────────────────────────── */
+#app { display:flex; flex-direction:column; height:100dvh; max-width:430px; margin:0 auto; position:relative; background:var(--bg); }
+
+/* ─── Nav (NavBottom exact) ──────────────────────────────────────── */
+#nav {
+  position:fixed; bottom:0; left:50%; transform:translateX(-50%);
+  width:100%; max-width:430px;
+  background:var(--nav-bg); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px);
+  border-top:.5px solid var(--border); z-index:100;
+}
+.nav-dots { display:flex; justify-content:center; gap:5px; padding-top:6px; }
+.nav-dot { height:3px; width:16px; border-radius:2px; background:var(--border); transform:scaleX(.31); transform-origin:center; transition:transform .22s ease,background .22s ease; }
+.nav-dot.active { background:var(--heading); transform:scaleX(1); }
+.nav-tabs { display:flex; justify-content:space-around; align-items:center; height:52px; }
+.nav-item { display:flex; flex-direction:column; align-items:center; gap:2px; cursor:pointer; flex:1; padding:4px 0; background:none; border:none; position:relative; }
+.nav-icon-wrap { position:relative; display:inline-flex; }
+.nav-label { font-size:9px; font-weight:500; color:var(--text-2); }
+.nav-item.active .nav-label { font-weight:800; color:var(--heading); }
+.nav-item svg { stroke:var(--text-2); }
+.nav-item.active svg { stroke:var(--heading); stroke-width:2.5; }
+.nav-badge { position:absolute; top:-4px; right:-8px; min-width:16px; height:16px; background:var(--green); border-radius:8px; font-size:9px; font-weight:800; color:#fff; display:flex; align-items:center; justify-content:center; padding:0 3px; line-height:1; }
+
+/* ─── Pages ──────────────────────────────────────────────────────── */
+.page { display:none; flex-direction:column; height:calc(100dvh - var(--nav-h)); overflow:hidden; }
+.page.active { display:flex; }
+
+/* ─── Page header ────────────────────────────────────────────────── */
+.page-header { display:flex; align-items:center; justify-content:space-between; padding:16px 18px 14px; background:var(--surface); border-bottom:.5px solid var(--border); flex-shrink:0; }
+.page-title { font-size:22px; font-weight:800; color:var(--heading); letter-spacing:-.5px; cursor:pointer; user-select:none; }
+.lib-sel { font-size:11px; font-weight:600; padding:5px 10px; border-radius:20px; border:1.5px solid var(--border); background:var(--chip-bg); color:var(--text-2); cursor:pointer; outline:none; }
+
+/* view hint (tap title) */
+.view-hint { font-size:9px; font-weight:500; color:var(--text-2); letter-spacing:.02em; margin-top:1px; opacity:.7; }
+
+/* ─── Filter bar ─────────────────────────────────────────────────── */
+.filter-bar { flex-shrink:0; background:var(--surface); border-bottom:.5px solid var(--border); }
+.chip-row { display:flex; gap:6px; overflow-x:auto; padding:10px 16px 0; scrollbar-width:none; align-items:center; }
+.chip-row::-webkit-scrollbar { display:none; }
+.chip { font-size:10.5px; font-weight:600; flex-shrink:0; padding:5px 12px; border-radius:20px; border:none; cursor:pointer; white-space:nowrap; background:var(--chip-bg); color:var(--text-2); transition:background .12s,color .12s; }
+.chip.active { background:var(--navy); color:#fff; }
+.chip-manage { flex-shrink:0; padding:5px 10px; border-radius:20px; border:1.5px solid var(--border); background:transparent; color:var(--text-2); cursor:pointer; display:flex; align-items:center; transition:background .12s; }
+.chip-manage:hover { background:var(--chip-bg); }
+
+/* ─── Search ─────────────────────────────────────────────────────── */
+.search-wrap { position:relative; padding:8px 16px 12px; }
+.search-ico { position:absolute; left:28px; top:50%; transform:translateY(-50%); pointer-events:none; opacity:.4; display:flex; }
+.search-inp { width:100%; padding:10px 16px 10px 34px; border-radius:var(--radius-sm); border:1.5px solid var(--border); font-size:15px; background:var(--bg); color:var(--text); outline:none; }
+.search-inp::placeholder { color:var(--text-2); }
+
+/* ─── Content ────────────────────────────────────────────────────── */
+.content { flex:1; overflow-y:auto; min-height:0; background:var(--content-bg); }
+.content-pad { padding:14px 16px; }
+
+/* ─── Card group ─────────────────────────────────────────────────── */
+.cg { background:var(--surface); border-radius:var(--radius); overflow:hidden; }
+.cg > * + * { border-top:.5px solid var(--border); }
+
+/* ─── Dots / status ──────────────────────────────────────────────── */
+.dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+.dot-g { background:var(--green); }
+.dot-o { background:var(--orange); }
+.dot-r { background:var(--red); }
+.dot-x { background:var(--border); }
+@keyframes pulse { 0%,100%{opacity:1}50%{opacity:.3} }
+.dot-pulse { animation:pulse 1.2s ease-in-out infinite; }
+
+/* ─── Row card (Points + Liste) ──────────────────────────────────── */
+.row { display:flex; align-items:center; gap:10px; padding:10px 14px; cursor:pointer; background:var(--surface); }
+.row:active { background:var(--chip-bg); }
+.row-text { flex:1; min-width:0; }
+.row-title { font-size:15px; font-weight:700; color:var(--heading); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; letter-spacing:-.2px; }
+.row-meta  { font-size:11.5px; color:var(--text-2); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.loc-m { color:var(--green); font-weight:600; }
+.loc-n { color:var(--neudorf); font-weight:700; }
+.loaned { color:var(--orange); font-weight:500; }
+
+/* ─── Vignettes ──────────────────────────────────────────────────── */
+.thumb    { width:36px; height:52px; border-radius:4px; flex-shrink:0; object-fit:cover; background:var(--chip-bg); display:flex; align-items:center; justify-content:center; font-size:16px; }
+.thumb-lg { width:44px; height:63px; border-radius:6px; flex-shrink:0; background:var(--chip-bg); display:flex; align-items:center; justify-content:center; font-size:18px; }
+
+/* ─── Bouton + (avec vraie couleur) ─────────────────────────────── */
+.btn-add {
+  width:28px; height:28px; flex-shrink:0; border-radius:50%;
+  border:1.5px solid rgba(13,27,42,.18);
+  background:rgba(13,27,42,.06);
+  color:var(--navy);
+  font-size:18px; font-weight:300; line-height:1;
+  display:flex; align-items:center; justify-content:center;
+  cursor:pointer; transition:all .15s;
+}
+.btn-add:hover,.btn-add:active { background:var(--navy); color:#fff; border-color:var(--navy); }
+@media (prefers-color-scheme: dark) {
+  .btn-add { background:rgba(255,255,255,.07); border-color:rgba(255,255,255,.14); color:var(--text-2); }
+  .btn-add:hover,.btn-add:active { background:#4A7FC1; border-color:#4A7FC1; color:#fff; }
+}
+
+/* ─── StatusBadge exact ──────────────────────────────────────────── */
+.sb { display:inline-flex; align-items:center; gap:5px; font-size:10.5px; font-weight:700; padding:3px 9px; border-radius:6px; }
+.sb-g { background:rgba(34,197,94,.1); color:#15803d; }
+.sb-r { background:rgba(239,68,68,.1); color:#b91c1c; }
+.sb-x { background:var(--chip-bg); color:var(--text-2); }
+.sb-dot { width:5px; height:5px; border-radius:50%; display:inline-block; flex-shrink:0; }
+.type-pill { font-size:9px; font-weight:700; padding:2px 6px; border-radius:20px; background:var(--chip-bg); color:var(--text-2); white-space:nowrap; flex-shrink:0; }
+
+/* ─── Section (Listes) ───────────────────────────────────────────── */
+.sec-head { font-size:10px; font-weight:700; color:var(--text-2); text-transform:uppercase; letter-spacing:.1em; font-family:'DM Mono',monospace; margin-bottom:6px; padding-left:2px; }
+.sec-wrap { margin-bottom:16px; }
+.stats-bar { display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; }
+.stats-txt { font-size:10px; color:var(--text-2); font-family:'DM Mono',monospace; }
+.btn-check { padding:5px 14px; background:var(--chip-bg); border:none; border-radius:20px; font-size:10.5px; font-weight:600; color:var(--text-2); cursor:pointer; }
+.ts { font-size:10px; color:var(--text-2); font-family:'DM Mono',monospace; margin-bottom:14px; opacity:.7; }
+
+/* ─── Grid ───────────────────────────────────────────────────────── */
+.grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
+.gc { display:flex; flex-direction:column; cursor:pointer; border-radius:var(--radius-sm); overflow:hidden; background:var(--surface); }
+.gc-cover { position:relative; }
+.gc-tile   { width:100%; aspect-ratio:2/3; display:flex; align-items:center; justify-content:center; }
+.grid-2 .gc-tile { font-size:40px; }
+.grid-3 .gc-tile { font-size:28px; }
+.gc-info  { padding:6px 8px 8px; }
+.gc-title { font-size:11.5px; font-weight:700; color:var(--heading); line-height:1.3; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.grid-3 .gc-title { font-size:10.5px; }
+.gc-meta  { font-size:10px; color:var(--text-2); margin-top:2px; }
+.gc-dispo { font-size:10px; font-weight:600; margin-top:3px; display:flex; align-items:center; gap:3px; }
+.gc-dispo .dot { width:5px; height:5px; }
+.gc-plus {
+  position:absolute; bottom:6px; right:6px;
+  width:26px; height:26px; border-radius:50%;
+  background:rgba(255,255,255,.9); border:1.5px solid rgba(13,27,42,.14);
+  display:flex; align-items:center; justify-content:center;
+  font-size:17px; font-weight:300; color:var(--navy);
+  cursor:pointer; transition:all .15s;
+}
+.gc-plus:hover { background:var(--navy); color:#fff; border-color:var(--navy); }
+@media (prefers-color-scheme: dark) {
+  .gc-plus { background:rgba(22,34,50,.88); border-color:var(--border); color:var(--text-2); }
+  .gc-plus:hover { background:#4A7FC1; border-color:#4A7FC1; color:#fff; }
+}
+
+/* ─── Modals + sheets ────────────────────────────────────────────── */
+.overlay { position:fixed; inset:0; background:var(--overlay); display:flex; align-items:flex-end; z-index:200; opacity:0; pointer-events:none; transition:opacity .2s; }
+.overlay.open { opacity:1; pointer-events:all; }
+.modal-box { background:var(--surface); width:100%; border-radius:16px 16px 0 0; max-height:85dvh; display:flex; flex-direction:column; transform:translateY(100%); transition:transform .25s cubic-bezier(.25,.46,.45,.94); }
+.sheet-box  { background:var(--surface); width:100%; border-radius:16px 16px 0 0; transform:translateY(100%); transition:transform .25s cubic-bezier(.25,.46,.45,.94); }
+.overlay.open .modal-box,.overlay.open .sheet-box { transform:translateY(0); }
+.modal-hd { display:flex; align-items:center; justify-content:space-between; padding:20px 20px 12px; }
+.modal-ht { font-size:15px; font-weight:700; color:var(--heading); }
+.modal-close { background:none; border:none; font-size:22px; color:var(--text-2); cursor:pointer; line-height:1; padding:2px 6px; }
+.modal-section { padding:10px 20px 14px; border-top:.5px solid var(--border); }
+.modal-section-label { font-size:12px; font-weight:600; color:var(--text-2); margin-bottom:10px; }
+.modal-body { overflow-y:auto; flex:1; }
+
+/* view toggle in modal */
+.view-toggle { display:flex; background:var(--chip-bg); border-radius:10px; padding:3px; gap:2px; }
+.vbtn { height:30px; flex:1; border:none; cursor:pointer; border-radius:7px; background:transparent; color:var(--text-2); display:flex; align-items:center; justify-content:center; gap:5px; transition:background .12s,color .12s; font-size:10.5px; font-weight:600; padding:0 6px; white-space:nowrap; }
+.vbtn.active { background:var(--surface); color:var(--text); box-shadow:0 1px 3px rgba(0,0,0,.1); }
+
+/* manage modal rows */
+.mgr-row { display:flex; align-items:center; gap:12px; padding:12px 16px; }
+.mgr-row + .mgr-row { border-top:.5px solid var(--border); }
+.mgr-drag { cursor:grab; color:var(--text-2); opacity:.5; flex-shrink:0; }
+.mgr-name { flex:1; font-size:14px; font-weight:600; color:var(--heading); }
+.mgr-count { font-size:12px; color:var(--text-2); }
+.mgr-eye { background:none; border:none; cursor:pointer; color:var(--text-2); padding:4px; display:flex; }
+.mgr-delete { width:28px; height:28px; border-radius:7px; border:none; background:rgba(239,68,68,.1); color:var(--red); cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:14px; }
+
+/* ─── Toast ──────────────────────────────────────────────────────── */
+.toast { position:fixed; bottom:calc(var(--nav-h) + 12px); left:50%; transform:translateX(-50%); background:var(--navy); color:#fff; padding:8px 18px; border-radius:20px; font-size:12px; font-weight:600; z-index:300; white-space:nowrap; opacity:0; transition:opacity .2s; pointer-events:none; }
+.toast.show { opacity:1; }
+
+/* ─── Desktop frame ──────────────────────────────────────────────── */
+@media (min-width:500px) {
+  body { background:#B8BEC8; display:flex; align-items:center; justify-content:center; min-height:100dvh; }
+  #app { border-radius:44px; overflow:hidden; box-shadow:0 36px 90px rgba(0,0,0,.32),0 0 0 1px rgba(0,0,0,.1); height:844px; }
+  #nav { position:absolute; bottom:0; left:0; right:0; transform:none; border-radius:0 0 44px 44px; }
+  .page { height:calc(844px - var(--nav-h)); }
+  .overlay,.toast { position:absolute; }
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- ═══════════════════ COMPTE / PRÊTS ════════════════════════════ -->
+<div class="page" id="page-compte">
+  <div class="page-header">
+    <div>
+      <div class="page-title" onclick="cycleCompteView()">Bonjour Paul</div>
+      <div class="view-hint" id="compte-view-hint">Vue · Vignette</div>
+    </div>
+    <div></div>
+  </div>
+
+  <!-- Tabs Réservations / Prêts -->
+  <div class="filter-bar">
+    <div class="chip-row">
+      <button class="chip active" id="ctab-res" onclick="setCompteTab('res')">Réservations (2)</button>
+      <button class="chip" id="ctab-prets" onclick="setCompteTab('prets')">Prêts (4)</button>
+    </div>
+    <div style="height:12px;"></div>
+  </div>
+
+  <div class="content">
+    <div class="content-pad" style="display:flex;flex-direction:column;gap:12px;">
+
+      <!-- Réservations -->
+      <div id="cpane-res">
+        <div class="cg" id="compte-res-content">
+          <!-- rendu par JS selon compteView -->
+        </div>
+      </div>
+
+      <!-- Prêts -->
+      <div id="cpane-prets" style="display:none;">
+        <div class="cg" id="compte-prets-content">
+          <!-- rendu par JS -->
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════ CATALOGUE ═════════════════════════════════ -->
+<div class="page active" id="page-catalogue">
+  <div class="page-header">
+    <div>
+      <div class="page-title" onclick="cycleCatView()">Catalogue</div>
+      <div class="view-hint" id="cat-view-hint">Vue · Liste</div>
+    </div>
+    <select class="lib-sel">
+      <option>Malraux + Neudorf</option>
+      <option>André Malraux</option>
+      <option>Neudorf</option>
+    </select>
+  </div>
+
+  <div class="filter-bar">
+    <div class="chip-row">
+      <button class="chip-manage" onclick="openModal('cat-manage')" title="Gérer les filtres">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="8" cy="6" r="2" fill="var(--surface)"/><circle cx="16" cy="12" r="2" fill="var(--surface)"/><circle cx="10" cy="18" r="2" fill="var(--surface)"/></svg>
+      </button>
+      <button class="chip active" onclick="catFilter(this)">Tout</button>
+      <button class="chip" onclick="catFilter(this)">Jeux PS5</button>
+      <button class="chip" onclick="catFilter(this)">Films Blu-ray</button>
+      <button class="chip" onclick="catFilter(this)">BD & Manga</button>
+      <button class="chip" onclick="catFilter(this)">Livres</button>
+      <button class="chip" onclick="catFilter(this)">Livres audio num.</button>
+      <button class="chip" onclick="catFilter(this)">Musique</button>
+    </div>
+    <div class="search-wrap">
+      <span class="search-ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg></span>
+      <input class="search-inp" placeholder="Titre, auteur, genre…" type="search">
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="content-pad" id="cat-content">
+      <!-- rendu par JS -->
+    </div>
+  </div>
+
+  <!-- Modal Gérer filtres -->
+  <div class="overlay" id="cat-manage" onclick="closeModal('cat-manage')">
+    <div class="modal-box" onclick="event.stopPropagation()">
+      <div class="modal-hd">
+        <span class="modal-ht">Gérer les filtres</span>
+        <button class="modal-close" onclick="closeModal('cat-manage')">×</button>
+      </div>
+      <div class="modal-section">
+        <div class="modal-section-label">Vue des résultats</div>
+        <div class="view-toggle" id="cat-vtoggle">
+          <button class="vbtn" onclick="setCatView('dots')">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="4" cy="8" r="1.5" fill="currentColor" stroke="none"/><line x1="9" y1="8" x2="21" y2="8"/><circle cx="4" cy="16" r="1.5" fill="currentColor" stroke="none"/><line x1="9" y1="16" x2="21" y2="16"/></svg>
+            Points
+          </button>
+          <button class="vbtn active" onclick="setCatView('list')">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8" cy="8" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            Liste
+          </button>
+          <button class="vbtn" onclick="setCatView('grid2')">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="2" y="2" width="9" height="13" rx="1.5"/><rect x="13" y="2" width="9" height="13" rx="1.5"/><rect x="2" y="17" width="9" height="5" rx="1.5"/><rect x="13" y="17" width="9" height="5" rx="1.5"/></svg>
+            2×2
+          </button>
+          <button class="vbtn" onclick="setCatView('grid3')">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="2" y="2" width="6" height="9" rx="1"/><rect x="9" y="2" width="6" height="9" rx="1"/><rect x="16" y="2" width="6" height="9" rx="1"/><rect x="2" y="13" width="6" height="9" rx="1"/><rect x="9" y="13" width="6" height="9" rx="1"/><rect x="16" y="13" width="6" height="9" rx="1"/></svg>
+            3×3
+          </button>
+        </div>
+      </div>
+      <div class="modal-section">
+        <div class="modal-section-label">Filtres actifs</div>
+        <div class="modal-body">
+          <div class="mgr-row">
+            <div class="mgr-drag">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="7" r="1.5" fill="currentColor" stroke="none"/><circle cx="15" cy="7" r="1.5" fill="currentColor" stroke="none"/><circle cx="9" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="15" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="9" cy="17" r="1.5" fill="currentColor" stroke="none"/><circle cx="15" cy="17" r="1.5" fill="currentColor" stroke="none"/></svg>
+            </div>
+            <div class="mgr-name">Tout</div>
+            <button class="mgr-eye"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+          </div>
+          <div class="mgr-row">
+            <div class="mgr-drag"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="7" r="1.5" fill="currentColor" stroke="none"/><circle cx="15" cy="7" r="1.5" fill="currentColor" stroke="none"/><circle cx="9" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="15" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="9" cy="17" r="1.5" fill="currentColor" stroke="none"/><circle cx="15" cy="17" r="1.5" fill="currentColor" stroke="none"/></svg></div>
+            <div class="mgr-name">Jeux PS5</div>
+            <button class="mgr-eye"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+            <button class="mgr-delete">×</button>
+          </div>
+          <div class="mgr-row">
+            <div class="mgr-drag"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="7" r="1.5" fill="currentColor" stroke="none"/><circle cx="15" cy="7" r="1.5" fill="currentColor" stroke="none"/><circle cx="9" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="15" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="9" cy="17" r="1.5" fill="currentColor" stroke="none"/><circle cx="15" cy="17" r="1.5" fill="currentColor" stroke="none"/></svg></div>
+            <div class="mgr-name">Films Blu-ray</div>
+            <button class="mgr-eye"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+            <button class="mgr-delete">×</button>
+          </div>
+          <div class="mgr-row" style="opacity:.4;">
+            <div class="mgr-drag"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="7" r="1.5" fill="currentColor" stroke="none"/><circle cx="15" cy="7" r="1.5" fill="currentColor" stroke="none"/><circle cx="9" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="15" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="9" cy="17" r="1.5" fill="currentColor" stroke="none"/><circle cx="15" cy="17" r="1.5" fill="currentColor" stroke="none"/></svg></div>
+            <div class="mgr-name">BD & Manga</div>
+            <button class="mgr-eye"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════ MES LISTES ════════════════════════════════ -->
+<div class="page" id="page-listes">
+  <div class="page-header">
+    <div>
+      <div class="page-title" onclick="cycleLstView()">Mes listes</div>
+      <div class="view-hint" id="lst-view-hint">Vue · Liste</div>
+    </div>
+    <select class="lib-sel">
+      <option>Malraux + Neudorf</option>
+    </select>
+  </div>
+
+  <div class="filter-bar">
+    <div class="chip-row">
+      <button class="chip-manage" onclick="openModal('lst-manage')" title="Gérer les listes">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="8" cy="6" r="2" fill="var(--surface)"/><circle cx="16" cy="12" r="2" fill="var(--surface)"/><circle cx="10" cy="18" r="2" fill="var(--surface)"/></svg>
+      </button>
+      <button class="chip active" id="ltab-jeux"   onclick="setLstTab('jeux',this)">Jeux <span style="opacity:.6">16</span></button>
+      <button class="chip"        id="ltab-films"  onclick="setLstTab('films',this)">Films <span style="opacity:.6">8</span></button>
+      <button class="chip"        id="ltab-livres" onclick="setLstTab('livres',this)">Livres <span style="opacity:.6">5</span></button>
+      <button class="chip"        id="ltab-bd"     onclick="setLstTab('bd',this)">BD <span style="opacity:.6">3</span></button>
+      <button class="chip" style="border:1.5px dashed var(--border);background:transparent;color:var(--text-2);">+ Liste</button>
+    </div>
+    <div class="search-wrap">
+      <span class="search-ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg></span>
+      <input class="search-inp" placeholder="Rechercher ou ajouter dans Jeux…" type="search" id="lst-search">
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="content-pad" id="lst-content">
+      <!-- rendu par JS -->
+    </div>
+  </div>
+
+  <!-- Modal Gérer listes -->
+  <div class="overlay" id="lst-manage" onclick="closeModal('lst-manage')">
+    <div class="modal-box" onclick="event.stopPropagation()">
+      <div class="modal-hd">
+        <span class="modal-ht">Gérer les listes</span>
+        <button class="modal-close" onclick="closeModal('lst-manage')">×</button>
+      </div>
+      <div class="modal-section">
+        <div class="modal-section-label">Vue des items</div>
+        <div class="view-toggle" id="lst-vtoggle">
+          <button class="vbtn" onclick="setLstView('dots')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="4" cy="8" r="1.5" fill="currentColor" stroke="none"/><line x1="9" y1="8" x2="21" y2="8"/><circle cx="4" cy="16" r="1.5" fill="currentColor" stroke="none"/><line x1="9" y1="16" x2="21" y2="16"/></svg>Points</button>
+          <button class="vbtn active" onclick="setLstView('list')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8" cy="8" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>Liste</button>
+          <button class="vbtn" onclick="setLstView('grid2')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="2" y="2" width="9" height="13" rx="1.5"/><rect x="13" y="2" width="9" height="13" rx="1.5"/><rect x="2" y="17" width="9" height="5" rx="1.5"/><rect x="13" y="17" width="9" height="5" rx="1.5"/></svg>2×2</button>
+          <button class="vbtn" onclick="setLstView('grid3')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="2" y="2" width="6" height="9" rx="1"/><rect x="9" y="2" width="6" height="9" rx="1"/><rect x="16" y="2" width="6" height="9" rx="1"/><rect x="2" y="13" width="6" height="9" rx="1"/><rect x="9" y="13" width="6" height="9" rx="1"/><rect x="16" y="13" width="6" height="9" rx="1"/></svg>3×3</button>
+        </div>
+      </div>
+      <div class="modal-section" style="border-top:.5px solid var(--border);">
+        <div class="modal-section-label">Mes listes</div>
+      </div>
+      <div class="modal-body">
+        <div class="mgr-row">
+          <div class="mgr-drag"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="7" r="1.5" fill="currentColor" stroke="none"/><circle cx="15" cy="7" r="1.5" fill="currentColor" stroke="none"/><circle cx="9" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="15" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="9" cy="17" r="1.5" fill="currentColor" stroke="none"/><circle cx="15" cy="17" r="1.5" fill="currentColor" stroke="none"/></svg></div>
+          <div class="mgr-name">Jeux <span class="mgr-count">16</span></div>
+          <button class="mgr-eye"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+        </div>
+        <div class="mgr-row">
+          <div class="mgr-drag"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="7" r="1.5" fill="currentColor" stroke="none"/><circle cx="15" cy="7" r="1.5" fill="currentColor" stroke="none"/><circle cx="9" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="15" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="9" cy="17" r="1.5" fill="currentColor" stroke="none"/><circle cx="15" cy="17" r="1.5" fill="currentColor" stroke="none"/></svg></div>
+          <div class="mgr-name">Films <span class="mgr-count">8</span></div>
+          <button class="mgr-eye"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+          <button class="mgr-delete">×</button>
+        </div>
+        <div class="mgr-row">
+          <div class="mgr-drag"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="7" r="1.5" fill="currentColor" stroke="none"/><circle cx="15" cy="7" r="1.5" fill="currentColor" stroke="none"/><circle cx="9" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="15" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="9" cy="17" r="1.5" fill="currentColor" stroke="none"/><circle cx="15" cy="17" r="1.5" fill="currentColor" stroke="none"/></svg></div>
+          <div class="mgr-name">Livres <span class="mgr-count">5</span></div>
+          <button class="mgr-eye"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+          <button class="mgr-delete">×</button>
+        </div>
+        <div class="mgr-row" style="opacity:.4;">
+          <div class="mgr-drag"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="7" r="1.5" fill="currentColor" stroke="none"/><circle cx="15" cy="7" r="1.5" fill="currentColor" stroke="none"/><circle cx="9" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="15" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="9" cy="17" r="1.5" fill="currentColor" stroke="none"/><circle cx="15" cy="17" r="1.5" fill="currentColor" stroke="none"/></svg></div>
+          <div class="mgr-name">BD <span class="mgr-count">3</span></div>
+          <button class="mgr-eye"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg></button>
+          <button class="mgr-delete">×</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══ NAV ══════════════════════════════════════════════════════ -->
+<nav id="nav">
+  <div class="nav-dots">
+    <div class="nav-dot" id="nd0"></div>
+    <div class="nav-dot active" id="nd1"></div>
+    <div class="nav-dot" id="nd2"></div>
+  </div>
+  <div class="nav-tabs">
+    <button class="nav-item" id="nt0" onclick="setPage('compte',0)">
+      <span class="nav-icon-wrap">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+      </span>
+      <span class="nav-label">Prêts</span>
+    </button>
+    <button class="nav-item active" id="nt1" onclick="setPage('catalogue',1)">
+      <span class="nav-icon-wrap">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      </span>
+      <span class="nav-label">Catalogue</span>
+    </button>
+    <button class="nav-item" id="nt2" onclick="setPage('listes',2)">
+      <span class="nav-icon-wrap">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+        <span class="nav-badge" id="nav-badge">9</span>
+      </span>
+      <span class="nav-label">Listes</span>
+    </button>
+  </div>
+  <div style="height:env(safe-area-inset-bottom,0);"></div>
+</nav>
+
+<div class="toast" id="app-toast">✓ Ajouté à la liste</div>
+</div><!-- /app -->
+
+<script>
+/* ────────────────── DATA ──────────────────────────────────────── */
+const CAT_ITEMS = [
+  {d:'g',t:"L'inconnu du lac",          m:'Film · Alain Guiraudie · 2013',   bg:'rgba(249,115,22,.1)', ic:'🎬'},
+  {d:'o',t:"Assassin's Creed Shadows",  m:'PS5 · Ubisoft · 2025',            bg:'rgba(59,130,246,.1)', ic:'🎮'},
+  {d:'g',t:"A Plague Tale : Requiem",   m:'PS5 · Asobo Studio · 2022',       bg:'rgba(59,130,246,.1)', ic:'🎮'},
+  {d:'x',t:"Nine Sols",                 m:'PS5 · Red Candle · 2024',         bg:'rgba(59,130,246,.1)', ic:'🎮'},
+  {d:'g',t:"Madeleine Collins",         m:'Film · Antoine Barraud · 2021',   bg:'rgba(249,115,22,.1)', ic:'🎬'},
+  {d:'o',t:"Anatomie d'une chute",      m:'Film · Justine Triet · 2023',     bg:'rgba(249,115,22,.1)', ic:'🎬'},
+  {d:'g',t:"Michael Haneke — Coffret",  m:'Film · Michael Haneke · 2013',    bg:'rgba(249,115,22,.1)', ic:'🎬'},
+  {d:'x',t:"Elden Ring",                m:'PS5 · FromSoftware · 2022',       bg:'rgba(59,130,246,.1)', ic:'🎮'},
+  {d:'g',t:"Spirou et Fantasio",        m:'BD · Franquin · 2021',            bg:'rgba(20,184,166,.1)', ic:'📚'},
+  {d:'o',t:"Silent Hill 2",             m:'PS5 · Bloober Team · 2024',       bg:'rgba(59,130,246,.1)', ic:'🎮'},
+  {d:'g',t:"Ghost of Tsushima",         m:'PS5 · Sucker Punch · 2020',       bg:'rgba(59,130,246,.1)', ic:'🎮'},
+  {d:'x',t:"Orbital",                   m:'Livre · Samantha Harvey · 2023',  bg:'rgba(34,197,94,.1)',  ic:'📖'},
+]
+
+const JEUX_AVAIL = [
+  {t:"Assassin's Creed Shadows", m:'PS5', loc:'both'},
+  {t:"Nine Sols",                m:'PS5', loc:'m'},
+  {t:"A Plague Tale : Requiem",  m:'PS5', loc:'n'},
+  {t:"Kena : Bridge of Spirits", m:'PS5', loc:'m'},
+  {t:"Ratchet & Clank",         m:'PS5', loc:'both'},
+  {t:"The Last of Us Part I",   m:'PS5', loc:'m'},
+  {t:"Elden Ring",              m:'PS5', loc:'n'},
+  {t:"Ghost of Tsushima",       m:'PS5', loc:'m'},
+  {t:"Returnal",                m:'PS5', loc:'m'},
+]
+const JEUX_LOAN = [
+  {t:"Silent Hill 2",   m:'PS5', due:'5 juil.',  loc:'Malraux'},
+  {t:"Lies of P",       m:'PS5', due:'8 juil.',  loc:'Malraux'},
+  {t:"Spider-Man 2",    m:'PS5', due:'10 juil.', loc:'Neudorf'},
+  {t:"Demon's Souls",   m:'PS5', due:'12 juil.', loc:'Malraux'},
+  {t:"Baldur's Gate 3", m:'PS5', due:'14 juil.', loc:'Neudorf'},
+]
+const JEUX_PEND = [
+  {t:"Astro Bot"},
+  {t:"Sekiro : Shadows Die Twice"},
+]
+
+const COMPTE_RES = [
+  {d:'g', ic:'🎮', bg:'rgba(59,130,246,.1)', t:"Marvel's Spider-Man 2", type:'PS5',  loc:'Malraux', sb:'g', sl:'À récupérer', until:'30 juin'},
+  {d:'x', ic:'🎬', bg:'rgba(249,115,22,.1)',  t:"La zone d'intérêt",    type:'Film', loc:'Neudorf', sb:'x', sl:'Rang 2'},
+]
+const COMPTE_PRETS = [
+  {d:'g', ic:'🎮', bg:'rgba(59,130,246,.1)',  t:"Silent Hill 2",        type:'PS5',   loc:'Malraux', sb:'g', sl:"À rendre le 5 juil."},
+  {d:'o', ic:'🎬', bg:'rgba(249,115,22,.1)',   t:"Anatomie d'une chute", type:'Film',  loc:'Malraux', sb:'r', sl:"Dans 2j"},
+  {d:'r', ic:'📖', bg:'rgba(34,197,94,.1)',   t:"No Longer Human",      type:'Livre', loc:'Malraux', sb:'r', sl:"En retard"},
+  {d:'g', ic:'🎮', bg:'rgba(59,130,246,.1)',  t:"Lies of P",            type:'PS5',   loc:'Neudorf', sb:'g', sl:"À rendre le 14 juil."},
+]
+
+/* ────────────────── RENDERERS ─────────────────────────────────── */
+function locTag(loc) {
+  if (!loc) return ''
+  const isN = loc === 'Neudorf' || loc === 'n' || loc === 'both'
+  const isM = loc === 'Malraux' || loc === 'm' || loc === 'both'
+  if (loc === 'both') return `<span class="loc-m">Malraux</span> <span style="color:var(--border)">·</span> <span class="loc-n">Neudorf</span>`
+  if (isN) return `<span class="loc-n">Neudorf</span>`
+  return `<span class="loc-m">Malraux</span>`
+}
+
+function renderRow(item, showThumb) {
+  const dot = item.d==='g'?'dot-g':item.d==='o'?'dot-o':item.d==='r'?'dot-r':'dot-x'
+  const thumb = showThumb ? `<div class="thumb" style="background:${item.bg};">${item.ic}</div>` : ''
+  return `<div class="row">
+    <div class="dot ${dot}"></div>
+    ${thumb}
+    <div class="row-text">
+      <div class="row-title">${item.t}</div>
+      <div class="row-meta">${item.m}</div>
+    </div>
+    <button class="btn-add" onclick="showToast(event)">+</button>
+  </div>`
+}
+
+function renderGrid(items, cols) {
+  const cls = cols===3?'grid-3':'grid-2'
+  return `<div class="${cls}">${items.map(item=>{
+    const dot = item.d==='g'?'dot-g':item.d==='o'?'dot-o':'dot-x'
+    const dispo = item.d==='g'?`<span style="color:var(--green)">Disponible</span>`:item.d==='o'?`<span style="color:var(--orange)">Emprunté</span>`:`<span style="color:var(--text-2)">—</span>`
+    return `<div class="gc">
+      <div class="gc-cover">
+        <div class="gc-tile" style="background:${item.bg};">${item.ic}</div>
+        <button class="gc-plus" onclick="showToast(event)">+</button>
+      </div>
+      <div class="gc-info">
+        <div class="gc-title">${item.t}</div>
+        <div class="gc-meta">${item.m}</div>
+        <div class="gc-dispo"><span class="dot ${dot}"></span>${dispo}</div>
+      </div>
+    </div>`
+  }).join('')}</div>`
+}
+
+function sbClass(s){ return s==='g'?'sb-g':s==='r'?'sb-r':'sb-x' }
+function sbDot(s)  { return s==='g'?'var(--green)':s==='r'?'var(--red)':'#9CA3AF' }
+
+function renderCompteCard(item, showThumb) {
+  const dot = item.d==='g'?'dot-g':item.d==='r'?'dot-r':item.d==='o'?'dot-o':'dot-x'
+  const isN = item.loc==='Neudorf'
+  const locStr = `<span style="font-size:12px;color:${isN?'var(--neudorf)':'var(--text-2)'};font-weight:${isN?700:400};">${item.loc}</span>`
+  const thumb = showThumb ? `<div class="thumb-lg" style="background:${item.bg};">${item.ic}</div>` : ''
+  const until = item.until ? `<div style="font-size:10px;color:#16A34A;font-weight:500;margin-top:4px;">Jusqu'au ${item.until}</div>` : ''
+  return `<div style="display:flex;align-items:center;gap:10px;padding:9px 14px;">
+    <div class="dot ${dot}"></div>
+    ${thumb}
+    <div style="flex:1;min-width:0;">
+      <div class="row-title">${item.t}</div>
+      <div class="row-meta" style="margin-top:2px;">${item.type} · ${locStr}</div>
+      <div style="margin-top:6px;">
+        <span class="sb ${sbClass(item.sb)}"><span class="sb-dot" style="background:${sbDot(item.sb)};"></span>${item.sl}</span>
+      </div>
+      ${until}
+    </div>
+  </div>`
+}
+
+function renderCompteGrid(items, cols, showThumb) {
+  const cls = cols===3?'grid-3':'grid-2'
+  return `<div class="${cls}">${items.map(item=>{
+    const isN = item.loc==='Neudorf'
+    const dot = item.d==='g'?'dot-g':item.d==='r'?'dot-r':item.d==='o'?'dot-o':'dot-x'
+    const thumb = showThumb ? `<div class="gc-tile" style="background:${item.bg};">${item.ic}</div>` : ''
+    return `<div class="gc">
+      ${showThumb?`<div class="gc-cover">${thumb}</div>`:''}
+      <div class="gc-info">
+        <div class="gc-title">${item.t}</div>
+        <div class="gc-meta">${item.type} · <span style="color:${isN?'var(--neudorf)':'var(--text-2)'};font-weight:${isN?700:400};">${item.loc}</span></div>
+        <div style="margin-top:4px;"><span class="sb ${sbClass(item.sb)}" style="font-size:9.5px;padding:2px 7px;"><span class="sb-dot" style="background:${sbDot(item.sb)};"></span>${item.sl}</span></div>
+      </div>
+    </div>`
+  }).join('')}</div>`
+}
+
+function renderLstItem(item, view) {
+  const locMeta = item.loc==='both'
+    ? `PS5 · ${locTag('both')}`
+    : `${item.m} · ${locTag(item.loc)}`
+  if (view==='dots') return `<div class="row"><div class="dot dot-g"></div><div class="row-text"><div class="row-title">${item.t}</div><div class="row-meta">${locMeta}</div></div></div>`
+  if (view==='list') return `<div class="row"><div class="dot dot-g"></div><div class="thumb" style="background:rgba(59,130,246,.1);">🎮</div><div class="row-text"><div class="row-title">${item.t}</div><div class="row-meta">${locMeta}</div></div></div>`
+  return '' // grid handled separately
+}
+function renderLstLoan(item, view) {
+  const isN = item.loc==='Neudorf'
+  const locHtml = `${item.m} · <span style="color:${isN?'var(--neudorf)':'var(--orange)'};font-weight:${isN?700:500};">${item.loc}</span> <span style="color:var(--text-2);">· retour ${item.due}</span>`
+  if (view==='dots') return `<div class="row"><div class="dot dot-o"></div><div class="row-text"><div class="row-title">${item.t}</div><div class="row-meta">${locHtml}</div></div></div>`
+  if (view==='list') return `<div class="row"><div class="dot dot-o"></div><div class="thumb" style="background:rgba(59,130,246,.1);">🎮</div><div class="row-text"><div class="row-title">${item.t}</div><div class="row-meta">${locHtml}</div></div></div>`
+  return ''
+}
+
+/* ────────────────── VIEW STATE ────────────────────────────────── */
+const VIEWS = ['dots','list','grid2','grid3']
+const VNAMES = {dots:'Points', list:'Liste', grid2:'Grille 2×2', grid3:'Grille 3×3'}
+
+let catView = 'list', lstView = 'list', compteView = 'list', compteTab = 'res', lstTab = 'jeux'
+
+function updateVToggle(toggleId, activeView) {
+  const el = document.getElementById(toggleId)
+  if(!el) return
+  el.querySelectorAll('.vbtn').forEach((b,i)=>b.classList.toggle('active', VIEWS[i]===activeView))
+}
+
+/* ────────────────── CATALOGUE ─────────────────────────────────── */
+function setCatView(v) {
+  catView = v
+  document.getElementById('cat-view-hint').textContent = `Vue · ${VNAMES[v]} (taper titre)`
+  updateVToggle('cat-vtoggle', v)
+  renderCat()
+}
+function cycleCatView() {
+  const i = (VIEWS.indexOf(catView)+1)%VIEWS.length
+  setCatView(VIEWS[i])
+}
+function catFilter(el) {
+  document.querySelectorAll('#page-catalogue .filter-bar .chip').forEach(c=>c.classList.remove('active'))
+  el.classList.add('active')
+}
+function renderCat() {
+  const el = document.getElementById('cat-content')
+  const hdr = `<div style="font-size:10px;color:var(--text-2);font-family:'DM Mono',monospace;margin-bottom:10px;">12 résultats</div>`
+  if (catView==='dots') {
+    el.innerHTML = hdr + `<div class="cg">${CAT_ITEMS.map(i=>renderRow(i,false)).join('')}</div>`
+  } else if (catView==='list') {
+    el.innerHTML = hdr + `<div class="cg">${CAT_ITEMS.map(i=>renderRow(i,true)).join('')}</div>`
+  } else if (catView==='grid2') {
+    el.innerHTML = hdr + renderGrid(CAT_ITEMS, 2)
+  } else {
+    el.innerHTML = hdr + renderGrid(CAT_ITEMS, 3)
+  }
+}
+
+/* ────────────────── MES LISTES ────────────────────────────────── */
+function setLstView(v) {
+  lstView = v
+  document.getElementById('lst-view-hint').textContent = `Vue · ${VNAMES[v]} (taper titre)`
+  updateVToggle('lst-vtoggle', v)
+  renderLst()
+}
+function cycleLstView() {
+  const i = (VIEWS.indexOf(lstView)+1)%VIEWS.length
+  setLstView(VIEWS[i])
+}
+function setLstTab(name, el) {
+  lstTab = name
+  document.querySelectorAll('#page-listes .filter-bar .chip').forEach(c=>c.classList.remove('active'))
+  el.classList.add('active')
+  const labels = {jeux:'Jeux',films:'Films',livres:'Livres',bd:'BD'}
+  document.getElementById('lst-search').placeholder = `Rechercher ou ajouter dans ${labels[name]}…`
+  renderLst()
+}
+function renderLst() {
+  const el = document.getElementById('lst-content')
+  if (lstTab==='jeux') {
+    let html = `<div class="stats-bar"><span class="stats-txt">9 disponibles · 5 empruntés · 16 titres</span><button class="btn-check">↻ Tout vérifier</button></div><div class="ts">vérifié il y a 12 min</div>`
+    if (lstView==='grid2'||lstView==='grid3') {
+      const cols = lstView==='grid3'?3:2
+      const gi = JEUX_AVAIL.map(i=>({d:'g',t:i.t,m:'PS5',bg:'rgba(59,130,246,.1)',ic:'🎮',loc:i.loc}))
+      const gl = JEUX_LOAN.map(i=>({d:'o',t:i.t,m:'PS5',bg:'rgba(59,130,246,.1)',ic:'🎮',loc:i.loc}))
+      html += `<div class="sec-wrap"><div class="sec-head">Disponible <span style="color:var(--green)">· 9</span></div>`
+      html += `<div class="grid-${cols==='3'?3:cols}">${gi.map(it=>{
+        const loc = it.loc==='both'?locTag('both'):it.loc==='n'?locTag('n'):locTag('m')
+        return `<div class="gc"><div class="gc-cover"><div class="gc-tile" style="background:${it.bg};">${it.ic}</div></div><div class="gc-info"><div class="gc-title">${it.t}</div><div class="gc-meta">${loc}</div><div class="gc-dispo"><span class="dot dot-g"></span><span style="color:var(--green)">Disponible</span></div></div></div>`
+      }).join('')}</div></div>`
+      html += `<div class="sec-wrap"><div class="sec-head">Emprunté <span style="color:var(--orange)">· 5</span></div>`
+      html += `<div class="grid-${cols==='3'?3:cols}">${gl.map(it=>{
+        const isN = it.loc==='Neudorf'
+        return `<div class="gc"><div class="gc-cover"><div class="gc-tile" style="background:${it.bg};">${it.ic}</div></div><div class="gc-info"><div class="gc-title">${it.t}</div><div class="gc-meta"><span style="color:var(--orange)">${it.loc}</span></div><div class="gc-dispo"><span class="dot dot-o"></span><span style="color:var(--orange)">Emprunté</span></div></div></div>`
+      }).join('')}</div></div>`
+    } else {
+      html += `<div class="sec-wrap"><div class="sec-head">Disponible <span style="color:var(--green)">· 9</span></div><div class="cg">${JEUX_AVAIL.map(i=>renderLstItem(i,lstView)).join('')}</div></div>`
+      html += `<div class="sec-wrap"><div class="sec-head">Emprunté <span style="color:var(--orange)">· 5</span></div><div class="cg">${JEUX_LOAN.map(i=>renderLstLoan(i,lstView)).join('')}</div></div>`
+      html += `<div class="sec-wrap"><div class="sec-head">En attente <span style="color:var(--text-2)">· 2</span></div><div class="cg">${JEUX_PEND.map(i=>`<div class="row"><div class="dot dot-x dot-pulse"></div>${lstView==='list'?`<div class="thumb" style="background:rgba(59,130,246,.1);">🎮</div>`:''}<div class="row-text"><div class="row-title">${i.t}</div><div class="row-meta" style="font-family:'DM Mono',monospace;font-size:11px;">Non vérifié</div></div></div>`).join('')}</div></div>`
+    }
+    el.innerHTML = html
+  } else if (lstTab==='films') {
+    const avail = [
+      {t:"L'inconnu du lac",m:'Film · A. Guiraudie',loc:'m'},{t:"Madeleine Collins",m:'Film · A. Barraud',loc:'both'},
+      {t:"Michael Haneke — Coffret",m:'Film · M. Haneke',loc:'n'},{t:"La zone d'intérêt",m:'Film · J. Glazer',loc:'m'},
+      {t:"Past Lives",m:'Film · C. Song Paik',loc:'m'}
+    ]
+    const loan = [{t:"Anatomie d'une chute",m:'Film',loc:'Malraux',due:'3 juil.'},{t:"Oppenheimer",m:'Film',loc:'Neudorf',due:'7 juil.'}]
+    el.innerHTML = `<div class="stats-bar"><span class="stats-txt">5 disponibles · 2 empruntés · 8 titres</span><button class="btn-check">↻ Tout vérifier</button></div><div class="ts">vérifié il y a 2h</div>
+    <div class="sec-wrap"><div class="sec-head">Disponible <span style="color:var(--green)">· 5</span></div><div class="cg">${avail.map(i=>{
+      const showT = lstView==='list'
+      const thumb = showT?`<div class="thumb" style="background:rgba(249,115,22,.1);">🎬</div>`:''
+      return `<div class="row"><div class="dot dot-g"></div>${thumb}<div class="row-text"><div class="row-title">${i.t}</div><div class="row-meta">${i.m} · ${locTag(i.loc)}</div></div></div>`
+    }).join('')}</div></div>
+    <div class="sec-wrap"><div class="sec-head">Emprunté <span style="color:var(--orange)">· 2</span></div><div class="cg">${loan.map(i=>{
+      const isN = i.loc==='Neudorf'
+      const locHtml = `${i.m} · <span style="color:${isN?'var(--neudorf)':'var(--orange)'};font-weight:${isN?700:500};">${i.loc}</span> <span style="color:var(--text-2)">· retour ${i.due}</span>`
+      const thumb = lstView==='list'?`<div class="thumb" style="background:rgba(249,115,22,.1);">🎬</div>`:''
+      return `<div class="row"><div class="dot dot-o"></div>${thumb}<div class="row-text"><div class="row-title">${i.t}</div><div class="row-meta">${locHtml}</div></div></div>`
+    }).join('')}</div></div>`
+  } else if (lstTab==='livres') {
+    const pend = ['Orbital · S. Harvey','Les heures souterraines · D. de Vigan','No Longer Human · O. Dazai','La chambre des merveilles · J. Musso','Pachinko · M.-J. Lee']
+    const thumb = lstView==='list'?`<div class="thumb" style="background:rgba(34,197,94,.1);">📖</div>`:''
+    el.innerHTML = `<div class="stats-bar"><span class="stats-txt">5 titres · non vérifiés</span><button class="btn-check">↻ Tout vérifier</button></div><div class="ts">jamais vérifié</div>
+    <div class="sec-wrap"><div class="sec-head">En attente <span style="color:var(--text-2)">· 5</span></div><div class="cg">${pend.map(t=>`<div class="row"><div class="dot dot-x"></div>${thumb}<div class="row-text"><div class="row-title">${t.split(' · ')[0]}</div><div class="row-meta" style="color:var(--text-2);">${t.split(' · ')[1] ? t.split(' · ').slice(1).join(' · ') : ''} · Non vérifié</div></div></div>`).join('')}</div></div>`
+  } else {
+    const avail = ['Spirou et Fantasio · Franquin · m','Blacksad · Guarnido · n']
+    const pend = ['Tintin — L\'étoile mystérieuse · Hergé']
+    const thumb = lstView==='list'?`<div class="thumb" style="background:rgba(20,184,166,.1);">📚</div>`:''
+    el.innerHTML = `<div class="stats-bar"><span class="stats-txt">2 disponibles · 3 titres</span><button class="btn-check">↻ Tout vérifier</button></div><div class="ts">vérifié il y a 1j</div>
+    <div class="sec-wrap"><div class="sec-head">Disponible <span style="color:var(--green)">· 2</span></div><div class="cg">${avail.map(s=>{
+      const p=s.split(' · '), loc=p[p.length-1]
+      const title=p[0], author=p.slice(1,-1).join(' · ')
+      return `<div class="row"><div class="dot dot-g"></div>${thumb}<div class="row-text"><div class="row-title">${title}</div><div class="row-meta">BD · ${author} · ${locTag(loc)}</div></div></div>`
+    }).join('')}</div></div>
+    <div class="sec-wrap"><div class="sec-head">En attente <span style="color:var(--text-2)">· 1</span></div><div class="cg">${pend.map(s=>{
+      const p=s.split(' · '), title=p[0], author=p.slice(1).join(' · ')
+      return `<div class="row"><div class="dot dot-x"></div>${thumb}<div class="row-text"><div class="row-title">${title}</div><div class="row-meta" style="color:var(--text-2);">BD · ${author} · Non vérifié</div></div></div>`
+    }).join('')}</div></div>`
+  }
+}
+
+/* ────────────────── COMPTE / PRÊTS ────────────────────────────── */
+function setCompteView(v) {
+  compteView = v
+  document.getElementById('compte-view-hint').textContent = `Vue · ${VNAMES[v]} (taper titre)`
+  updateVToggle('cat-vtoggle', v) // no separate toggle for compte in this mockup
+  renderCompte()
+}
+function cycleCompteView() {
+  const i = (VIEWS.indexOf(compteView)+1)%VIEWS.length
+  compteView = VIEWS[i]
+  document.getElementById('compte-view-hint').textContent = `Vue · ${VNAMES[compteView]} (taper titre)`
+  renderCompte()
+}
+function setCompteTab(name) {
+  compteTab = name
+  document.getElementById('ctab-res').classList.toggle('active',name==='res')
+  document.getElementById('ctab-prets').classList.toggle('active',name==='prets')
+  document.getElementById('cpane-res').style.display = name==='res'?'block':'none'
+  document.getElementById('cpane-prets').style.display = name==='prets'?'block':'none'
+}
+function renderCompte() {
+  const v = compteView
+  const showThumb = v!=='dots'
+  const isGrid = v==='grid2'||v==='grid3'
+  const cols = v==='grid3'?3:2
+  // Res
+  const resEl = document.getElementById('compte-res-content')
+  if (isGrid) resEl.innerHTML = renderCompteGrid(COMPTE_RES, cols, showThumb)
+  else resEl.innerHTML = COMPTE_RES.map(i=>renderCompteCard(i,showThumb)).join('')
+  // Prets
+  const pretEl = document.getElementById('compte-prets-content')
+  if (isGrid) pretEl.innerHTML = renderCompteGrid(COMPTE_PRETS, cols, showThumb)
+  else pretEl.innerHTML = COMPTE_PRETS.map(i=>renderCompteCard(i,showThumb)).join('')
+}
+
+/* ────────────────── NAV ────────────────────────────────────────── */
+function setPage(name, idx) {
+  const pages = ['compte','catalogue','listes']
+  pages.forEach((p,i)=>{
+    document.getElementById('page-'+p).classList.toggle('active',p===name)
+    document.getElementById('nt'+i).classList.toggle('active',i===idx)
+    document.getElementById('nd'+i).classList.toggle('active',i===idx)
+  })
+}
+
+/* ────────────────── MODALS + SHEET ────────────────────────────── */
+function openModal(id)  { document.getElementById(id).classList.add('open') }
+function closeModal(id) { document.getElementById(id).classList.remove('open') }
+/* ────────────────── TOAST ──────────────────────────────────────── */
+let _tt
+function showToast(e) {
+  if(e) e.stopPropagation()
+  const t=document.getElementById('app-toast')
+  t.classList.add('show')
+  clearTimeout(_tt)
+  _tt=setTimeout(()=>t.classList.remove('show'),2200)
+}
+
+/* ────────────────── INIT ───────────────────────────────────────── */
+renderCat()
+renderLst()
+renderCompte()
+</script>
+</body>
+</html>
