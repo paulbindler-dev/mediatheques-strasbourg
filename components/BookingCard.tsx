@@ -2,6 +2,13 @@ import StatusBadge from './StatusBadge'
 import { parseIguanaDate, formatDate, getDaysUntil, type IguanaBooking } from '@/lib/iguana'
 import { typeBadge } from './ViewModeToggle'
 
+function shortLoc(loc: string | undefined | null): string {
+  const l = (loc ?? '').toLowerCase()
+  if (l.includes('neudorf')) return 'Neudorf'
+  if (l.includes('malraux')) return 'Malraux'
+  return loc ?? ''
+}
+
 export default function BookingCard({ b }: { b: IguanaBooking }) {
   const until = parseIguanaDate(b.AvailableUntilDate)
   const daysLeft = until ? getDaysUntil(until) : null
@@ -17,8 +24,10 @@ export default function BookingCard({ b }: { b: IguanaBooking }) {
 
   const showUntil = b.IsAvailable && until && daysLeft !== null && daysLeft > 0
   const thumb = b.ThumbnailUrl || b.DefaultThumbnailUrl
-  const isNeudorf = (b.LocationLabel ?? '').toLowerCase().includes('neudorf')
+  const locLabel = shortLoc(b.LocationLabel)
+  const isNeudorf = locLabel === 'Neudorf'
   const dotColor = variant === 'green' ? 'var(--green)' : variant === 'red' ? 'var(--red)' : 'var(--border)'
+  const typeLabel = typeBadge(b.TypeOfDocument ?? '', '')
 
   return (
     <a
@@ -35,17 +44,13 @@ export default function BookingCard({ b }: { b: IguanaBooking }) {
         alt=""
       />
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-heading)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', letterSpacing: '-0.2px' }}>
+        <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-heading)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', letterSpacing: '-0.2px' }}>
           {b.Title}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '2px', overflow: 'hidden' }}>
-          <span style={{ fontSize: '9px', fontWeight: 700, padding: '2px 6px', borderRadius: '20px', background: 'var(--tab-inactive-bg)', color: 'var(--text-2)', whiteSpace: 'nowrap', flexShrink: 0 }}>
-            {typeBadge(b.TypeOfDocument ?? '', '')}
-          </span>
-          {b.LocationLabel && (
-            <span style={{ fontSize: '12px', color: isNeudorf ? 'var(--neudorf)' : 'var(--text-2)', fontWeight: isNeudorf ? 700 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {b.LocationLabel}
-            </span>
+        <div style={{ fontSize: '11.5px', color: 'var(--text-2)', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {typeLabel}
+          {locLabel && (
+            <> · <span style={{ color: isNeudorf ? 'var(--neudorf)' : 'var(--text-2)', fontWeight: isNeudorf ? 700 : 400 }}>{locLabel}</span></>
           )}
         </div>
         <div style={{ marginTop: '6px' }}>

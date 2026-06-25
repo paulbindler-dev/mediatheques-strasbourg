@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Trash2, SlidersHorizontal, Eye, EyeOff, ChevronUp, ChevronDown } from 'lucide-react'
 import CoverImg from '@/components/CoverImg'
-import { ViewModeToggle, type ViewMode, TYPE_CONFIG } from '@/components/ViewModeToggle'
+import { ViewModeToggle, type ViewMode, TYPE_CONFIG, typeBadge } from '@/components/ViewModeToggle'
 import type { CatalogueItem } from '@/app/api/catalogue/search/route'
 import {
   loadStore, saveStore, addItem, removeItem, updateItem,
@@ -93,10 +93,12 @@ export default function EnviesPage() {
   const [pullProgress, setPullProgress] = useState(0)
   const checkAllRef = useRef<() => void>(() => {})
 
+  const VIEW_CYCLE: ViewMode[] = ['dots', 'list', 'grid2', 'grid3']
+
   useEffect(() => {
     const saved = localStorage.getItem('listes_view_mode')
-    if (saved === 'icons') setViewMode('images')
-    else if (saved === 'images' || saved === 'dots') setViewMode(saved as ViewMode)
+    if (saved === 'icons' || saved === 'images') setViewMode('list')
+    else if (['dots', 'list', 'grid2', 'grid3'].includes(saved ?? '')) setViewMode(saved as ViewMode)
   }, [])
 
   useEffect(() => {
@@ -340,7 +342,7 @@ export default function EnviesPage() {
         flexShrink: 0,
       }}>
         <div
-          onClick={() => setViewMode(m => (m === 'dots' ? 'images' : 'dots'))}
+          onClick={() => setViewMode(m => VIEW_CYCLE[(VIEW_CYCLE.indexOf(m) + 1) % VIEW_CYCLE.length])}
           style={{ fontSize: '22px', fontWeight: 800, color: 'var(--color-heading)', letterSpacing: '-0.5px', fontFamily: 'DM Sans, sans-serif', cursor: 'pointer', userSelect: 'none' }}
         >
           Mes listes
@@ -373,6 +375,19 @@ export default function EnviesPage() {
           data-hscroll
           style={{ display: 'flex', gap: '6px', overflowX: 'auto', padding: '10px 16px 0', scrollbarWidth: 'none' }}
         >
+          <button
+            onClick={() => setShowManageModal(true)}
+            style={{
+              fontSize: '10.5px', fontWeight: 600, flexShrink: 0,
+              padding: '5px 10px', borderRadius: '20px',
+              border: '1.5px solid var(--border)',
+              background: 'transparent', color: 'var(--text-2)',
+              cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
+            }}
+            title="Gérer les listes"
+          >
+            <SlidersHorizontal size={13} strokeWidth={2} />
+          </button>
           {store.lists.filter(l => !l.hidden).map(list => (
             <button
               key={list.id}
@@ -405,19 +420,6 @@ export default function EnviesPage() {
             }}
           >
             + Nouvelle liste
-          </button>
-          <button
-            onClick={() => setShowManageModal(true)}
-            style={{
-              fontSize: '10.5px', fontWeight: 600, flexShrink: 0,
-              padding: '5px 10px', borderRadius: '20px',
-              border: '1.5px solid var(--border)',
-              background: 'transparent', color: 'var(--text-2)',
-              cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
-            }}
-            title="Gérer les listes"
-          >
-            <SlidersHorizontal size={13} strokeWidth={2} />
           </button>
         </div>
 
@@ -559,7 +561,7 @@ export default function EnviesPage() {
                 return (
                   <>
                     {available.length > 0 && (
-                      <Section label="Disponible" count={available.length} accent="var(--green)">
+                      <Section label="Disponible" count={available.length} accent="var(--green)" viewMode={viewMode}>
                         {available.map(item => (
                           <ItemCard key={item.id} item={item} listDocType={currentList?.docType ?? ''}
                             onRemove={id => mutate(s => removeItem(s, id))} viewMode={viewMode} />
@@ -567,7 +569,7 @@ export default function EnviesPage() {
                       </Section>
                     )}
                     {loaned.length > 0 && (
-                      <Section label="Emprunté" count={loaned.length} accent="var(--orange)">
+                      <Section label="Emprunté" count={loaned.length} accent="var(--orange)" viewMode={viewMode}>
                         {loaned.map(item => (
                           <ItemCard key={item.id} item={item} listDocType={currentList?.docType ?? ''}
                             onRemove={id => mutate(s => removeItem(s, id))} viewMode={viewMode} />
@@ -575,7 +577,7 @@ export default function EnviesPage() {
                       </Section>
                     )}
                     {unknown.length > 0 && (
-                      <Section label="Au catalogue" count={unknown.length} accent="var(--text-2)">
+                      <Section label="Au catalogue" count={unknown.length} accent="var(--text-2)" viewMode={viewMode}>
                         {unknown.map(item => (
                           <ItemCard key={item.id} item={item} listDocType={currentList?.docType ?? ''}
                             onRemove={id => mutate(s => removeItem(s, id))} viewMode={viewMode} />
@@ -587,7 +589,7 @@ export default function EnviesPage() {
               })()}
 
               {notFound.length > 0 && (
-                <Section label="Pas trouvé" count={notFound.length} accent="var(--text-2)">
+                <Section label="Pas trouvé" count={notFound.length} accent="var(--text-2)" viewMode={viewMode}>
                   {notFound.map(item => (
                     <ItemCard key={item.id} item={item} listDocType={currentList?.docType ?? ''}
                       onRemove={id => mutate(s => removeItem(s, id))} viewMode={viewMode} />
@@ -596,7 +598,7 @@ export default function EnviesPage() {
               )}
 
               {pending.length > 0 && (
-                <Section label="En attente" count={pending.length} accent="var(--text-2)">
+                <Section label="En attente" count={pending.length} accent="var(--text-2)" viewMode={viewMode}>
                   {pending.map(item => (
                     <ItemCard key={item.id} item={item} listDocType={currentList?.docType ?? ''}
                       onRemove={id => mutate(s => removeItem(s, id))} viewMode={viewMode} />
@@ -798,9 +800,10 @@ function formatCheckedAt(ts: number | null): string | null {
   return `il y a ${Math.floor(hours / 24)}j`
 }
 
-function Section({ label, count, accent, children }: {
-  label: string; count: number; accent: string; children: React.ReactNode
+function Section({ label, count, accent, viewMode, children }: {
+  label: string; count: number; accent: string; viewMode: ViewMode; children: React.ReactNode
 }) {
+  const isGrid = viewMode === 'grid2' || viewMode === 'grid3'
   return (
     <div style={{ marginBottom: '16px' }}>
       <div style={{
@@ -810,11 +813,19 @@ function Section({ label, count, accent, children }: {
       }}>
         {label} <span style={{ color: accent }}>· {count}</span>
       </div>
-      <div className="group-items" style={{
-        background: 'var(--surface)', borderRadius: '12px', overflow: 'hidden',
-      }}>
-        {children}
-      </div>
+      {isGrid ? (
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: viewMode === 'grid3' ? '1fr 1fr 1fr' : '1fr 1fr',
+          gap: viewMode === 'grid3' ? '8px' : '10px',
+        }}>
+          {children}
+        </div>
+      ) : (
+        <div className="group-items" style={{ background: 'var(--surface)', borderRadius: '12px', overflow: 'hidden' }}>
+          {children}
+        </div>
+      )}
     </div>
   )
 }
@@ -822,6 +833,13 @@ function Section({ label, count, accent, children }: {
 const TYPE_ICON: Record<string, string> = {
   'Jeu vidéo': '🎮', 'Vidéo': '🎬', 'Livre': '📖',
   'BD ou manga': '📚', 'Musique': '🎵',
+}
+
+function shortLoc(loc: string | undefined | null): string {
+  const l = (loc ?? '').toLowerCase()
+  if (l.includes('neudorf')) return 'Neudorf'
+  if (l.includes('malraux')) return 'Malraux'
+  return loc ?? ''
 }
 
 function ItemCard({
@@ -838,6 +856,7 @@ function ItemCard({
   const [swipeX, setSwipeX] = useState(0)
   const [animating, setAnimating] = useState(false)
   const [hovered, setHovered] = useState(false)
+  const [imgFailed, setImgFailed] = useState(false)
   const startXRef = useRef(0)
   const startYRef = useRef(0)
   const startSwipeXRef = useRef(0)
@@ -858,24 +877,24 @@ function ItemCard({
     : isChecking ? 'var(--orange)'
     : 'var(--border)'
 
-  // Build subtitle
+  const docType = item.match?.type || listDocType
+  const typeConf = TYPE_CONFIG[docType]
+  const typeIcon = typeConf?.emoji ?? TYPE_ICON[docType] ?? '📄'
+  const typeLabel = typeBadge(docType, item.match?.subject ?? '')
+  const locLabel = shortLoc(item.foundAt)
+  const isNeudorf = locLabel === 'Neudorf'
+
   let subtitleNode: React.ReactNode = null
   if (isChecking) {
     subtitleNode = <span style={{ fontFamily: 'DM Mono, monospace' }}>Vérification…</span>
   } else if (isError) {
     subtitleNode = <span style={{ color: 'var(--red)' }}>Erreur</span>
   } else if (isFound && item.match) {
-    const location = item.foundAt ?? ''
-    const subject = item.match.subject ?? ''
-    const isNeudorfLoc = location.toLowerCase().includes('neudorf')
-    const locationColor = isNeudorfLoc ? 'var(--neudorf)' : isAvailable ? 'var(--green)' : 'var(--orange)'
-    const locationWeight = isNeudorfLoc ? 700 : 500
     subtitleNode = (
       <>
-        {subject && <span>{subject}</span>}
-        {subject && location && <span style={{ color: 'var(--text-2)' }}> · </span>}
-        {location && (
-          <span style={{ color: locationColor, fontWeight: locationWeight }}>{location}</span>
+        {typeLabel}
+        {locLabel && (
+          <> · <span style={{ color: isNeudorf ? 'var(--neudorf)' : 'var(--text-2)', fontWeight: isNeudorf ? 700 : 400 }}>{locLabel}</span></>
         )}
         {isLoaned && item.match.dueDate && (
           <span style={{ color: 'var(--text-2)' }}> · {item.match.dueDate}</span>
@@ -886,16 +905,46 @@ function ItemCard({
     subtitleNode = <span style={{ color: 'var(--text-2)' }}>Pas trouvé</span>
   }
 
-  const docType = item.match?.type || listDocType
-  const typeIcon = TYPE_ICON[docType] ?? '📄'
-  const thumbSubject = item.match?.subject ?? ''
-  const typeConf = TYPE_CONFIG[docType]
-
   const url = item.match?.url ?? null
 
   function handleDelete() {
     navigator.vibrate?.(8)
     onRemove(item.id)
+  }
+
+  if (viewMode === 'grid2' || viewMode === 'grid3') {
+    return (
+      <div
+        onClick={() => url && window.open(url, '_blank', 'noopener,noreferrer')}
+        style={{ cursor: url ? 'pointer' : 'default' }}
+      >
+        <div style={{ position: 'relative', aspectRatio: '2/3', borderRadius: 'var(--radius-sm)', overflow: 'hidden', background: typeConf?.bg ?? 'var(--tab-inactive-bg)' }}>
+          {item.match?.thumbnail && !imgFailed ? (
+            <img
+              src={item.match.thumbnail}
+              onError={() => setImgFailed(true)}
+              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+              alt=""
+            />
+          ) : (
+            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <span style={{ fontSize: viewMode === 'grid3' ? '24px' : '32px' }}>{typeIcon}</span>
+            </div>
+          )}
+          <div style={{ position: 'absolute', top: '5px', left: '5px', width: '7px', height: '7px', borderRadius: '50%', background: dotColor }} />
+        </div>
+        <div style={{ padding: '5px 2px 0' }}>
+          <div style={{
+            fontSize: viewMode === 'grid3' ? '10.5px' : '12px', fontWeight: 600,
+            color: 'var(--color-heading)', lineHeight: 1.3,
+            overflow: 'hidden', display: '-webkit-box',
+            WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const,
+          }}>
+            {item.title}
+          </div>
+        </div>
+      </div>
+    )
   }
 
   function snapTo(x: number) {
@@ -952,7 +1001,6 @@ function ItemCard({
       data-panel-open={panelOpen ? 'true' : 'false'}
       style={{ position: 'relative', overflow: 'hidden' }}
     >
-      {/* Delete button (swipe reveal) */}
       <div
         role="button"
         aria-label="Supprimer"
@@ -975,7 +1023,6 @@ function ItemCard({
         </div>
       </div>
 
-      {/* Item row */}
       <div
         onClick={handleClick}
         onMouseEnter={() => setHovered(true)}
@@ -993,31 +1040,27 @@ function ItemCard({
           willChange: swipeX !== 0 || animating ? 'transform' : 'auto',
         }}
       >
-        {/* Status dot */}
         <div style={{
           width: '7px', height: '7px', borderRadius: '50%', flexShrink: 0,
           background: dotColor,
           animation: isChecking ? 'pulse 1s infinite' : 'none',
         }} />
 
-        {/* Vignette — cover si disponible, tuile TYPE_CONFIG sinon */}
-        {viewMode === 'images' && (
-          <CoverImg thumbnail={item.match?.thumbnail} width={36} height={52} typeIcon={typeConf?.emoji ?? typeIcon} subject={thumbSubject} typeBg={typeConf?.bg} />
+        {viewMode === 'list' && (
+          <CoverImg thumbnail={item.match?.thumbnail} width={44} height={63} typeIcon={typeIcon} subject={item.match?.subject ?? ''} typeBg={typeConf?.bg} />
         )}
 
-        {/* Text content */}
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-heading)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-heading)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', letterSpacing: '-0.2px' }}>
             {item.title}
           </div>
           {subtitleNode && (
-            <div style={{ fontSize: '12px', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <div style={{ fontSize: '11.5px', color: 'var(--text-2)', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {subtitleNode}
             </div>
           )}
         </div>
 
-        {/* Desktop-only trash */}
         <button
           className="desktop-trash-btn"
           onClick={e => { e.stopPropagation(); handleDelete() }}
