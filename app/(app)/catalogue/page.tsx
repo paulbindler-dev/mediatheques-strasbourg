@@ -49,6 +49,7 @@ const BUILTIN_PRESETS: FilterPreset[] = [
   { id: 'bd',       label: 'BD',            icon: '📚', type: 'BD ou manga', subject: '', query: '' },
   { id: 'livres',   label: 'Livres',        icon: '📖', type: 'Livre',     subject: '',    query: '' },
   { id: 'musique',  label: 'Musique',       icon: '🎵', type: 'Musique',   subject: '',    query: '' },
+  { id: 'audio',    label: 'Livres audio',  icon: '🎧', type: 'Livre audio numérique', subject: '', query: '' },
 ]
 
 const LIBRARY_OPTIONS: { key: LibraryKey; label: string }[] = [
@@ -739,7 +740,7 @@ function CatalogCard({ item, onAddToList, viewMode }: { item: CatalogueItem; onA
   const typeConf = TYPE_CONFIG[item.type]
   const typeIcon = typeConf?.emoji ?? '📄'
   const typeLabel = typeBadge(item.type, item.subject ?? '')
-  const subtitle = [typeLabel, item.year].filter(Boolean).join(' · ')
+  const subtitle = [typeLabel, item.creator, item.year].filter(Boolean).join(' · ')
 
   if (viewMode === 'grid2' || viewMode === 'grid3') {
     return (
@@ -752,7 +753,7 @@ function CatalogCard({ item, onAddToList, viewMode }: { item: CatalogueItem; onA
             <img
               src={item.thumbnail}
               onError={() => setImgFailed(true)}
-              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+              style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
               alt=""
             />
           ) : (

@@ -33,7 +33,7 @@ export default function LoanCard({ l }: { l: IguanaLoan }) {
       <img
         src={thumb}
         onError={e => { (e.target as HTMLImageElement).src = l.DefaultThumbnailUrl }}
-        style={{ width: '44px', height: '63px', borderRadius: '6px', objectFit: 'cover', background: 'var(--bg)', flexShrink: 0 }}
+        style={{ width: '44px', height: '63px', borderRadius: '6px', objectFit: 'contain', background: 'var(--tab-inactive-bg)', flexShrink: 0 }}
         alt=""
       />
       <div style={{ flex: 1, minWidth: 0 }}>
@@ -42,6 +42,7 @@ export default function LoanCard({ l }: { l: IguanaLoan }) {
         </div>
         <div style={{ fontSize: '11.5px', color: 'var(--text-2)', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {typeLabel}
+          {l.Author && <> · {l.Author}</>}
           {locLabel && (
             <> · <span style={{ color: isNeudorf ? 'var(--neudorf)' : 'var(--text-2)', fontWeight: isNeudorf ? 700 : 400 }}>{locLabel}</span></>
           )}
