@@ -40,13 +40,13 @@ function savePresetsState(s: PresetsState): void {
 
 const BUILTIN_PRESETS: FilterPreset[] = [
   { id: 'all',      label: 'Tout',          icon: '🔍', type: '',          subject: '',    query: '' },
-  { id: 'ps5',      label: 'Jeux PS5',      icon: '🎮', type: 'Jeu vidéo', subject: 'PS5', query: '' },
-  { id: 'ps4',      label: 'Jeux PS4',      icon: '🕹️', type: 'Jeu vidéo', subject: 'PS4', query: '' },
+  { id: 'ps5',      label: 'PS5',           icon: '🎮', type: 'Jeu vidéo', subject: 'PS5', query: '' },
+  { id: 'ps4',      label: 'PS4',           icon: '🕹️', type: 'Jeu vidéo', subject: 'PS4', query: '' },
   { id: 'switch',   label: 'Switch',        icon: '🎯', type: 'Jeu vidéo', subject: 'Nintendo Switch', query: '' },
-  { id: 'bluray',   label: 'Films Blu-ray', icon: '🎬', type: 'Vidéo',     subject: '',    query: 'blu-ray' },
+  { id: 'bluray',   label: 'Blu-ray',       icon: '🎬', type: 'Vidéo',     subject: '',    query: 'blu-ray' },
   { id: 'films',    label: 'Films',         icon: '🎥', type: 'Vidéo',     subject: '',    query: '' },
   { id: 'series',   label: 'Séries',        icon: '📺', type: 'Vidéo',     subject: '',    query: 'série' },
-  { id: 'bd',       label: 'BD & Manga',    icon: '📚', type: 'BD ou manga', subject: '', query: '' },
+  { id: 'bd',       label: 'BD',            icon: '📚', type: 'BD ou manga', subject: '', query: '' },
   { id: 'livres',   label: 'Livres',        icon: '📖', type: 'Livre',     subject: '',    query: '' },
   { id: 'musique',  label: 'Musique',       icon: '🎵', type: 'Musique',   subject: '',    query: '' },
 ]
