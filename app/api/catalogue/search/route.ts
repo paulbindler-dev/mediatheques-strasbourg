@@ -11,6 +11,7 @@ const FACET_LOCATION = 93   // LocationSite_exact
 export type CatalogueItem = {
   rscId: string
   title: string
+  creator?: string          // author / director / artist extracted from Crtr field
   type: string
   subject: string
   publisher: string
@@ -103,9 +104,15 @@ async function searchIguana(
   const results: CatalogueItem[] = (d.Results ?? []).map(r => {
     const resource = (r.Resource ?? {}) as Record<string, unknown>
     const rscId = String(resource.RscId ?? '')
+    const rawCrtr = typeof resource.Crtr === 'string' ? resource.Crtr : ''
+    // "Nom, Prénom (dates). Rôle. Rôle2" → "Nom, Prénom"
+    const creator = rawCrtr
+      ? rawCrtr.replace(/\.\s+[A-ZÀÂÇÉÈÊËÎÏÔÙÛÜ].*$/, '').replace(/\s*\([^)]*\)\s*$/, '').trim()
+      : undefined
     return {
       rscId,
       title: String(resource.Ttl ?? ''),
+      creator: creator || undefined,
       type: String(resource.Type ?? ''),
       subject: String(resource.Subj ?? ''),
       publisher: String(resource.Pbls ?? ''),
