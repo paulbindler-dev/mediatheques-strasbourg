@@ -167,6 +167,10 @@ export default function CataloguePage() {
   const [showManagePresets, setShowManagePresets] = useState(false)
   const [presetsState, setPresetsState] = useState<PresetsState>({ hiddenIds: [], orderedIds: [] })
   const [viewMode, setViewMode] = useState<ViewMode>('dots')
+  const [inListTitles, setInListTitles] = useState<Set<string>>(() => {
+    const s = loadStore()
+    return new Set(s.lists.flatMap(l => l.items.map(i => i.title.toLowerCase())))
+  })
   const dndSensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } }),
@@ -324,6 +328,7 @@ export default function CataloguePage() {
     const store = loadStore()
     const updated = addItem(store, listId, item.title)
     saveStore(updated)
+    setInListTitles(prev => new Set([...prev, item.title.toLowerCase()]))
     setAddToast(`"${item.title}" ajouté`)
     setTimeout(() => setAddToast(null), 2500)
     setShowAddModal(null)
@@ -543,6 +548,7 @@ export default function CataloguePage() {
                   item={item}
                   onAddToList={() => setShowAddModal(item)}
                   viewMode={viewMode}
+                  isInList={inListTitles.has(item.title.toLowerCase())}
                 />
               ))}
             </div>
@@ -730,7 +736,7 @@ export default function CataloguePage() {
   )
 }
 
-function CatalogCard({ item, onAddToList, viewMode }: { item: CatalogueItem; onAddToList: () => void; viewMode: ViewMode }) {
+function CatalogCard({ item, onAddToList, viewMode, isInList }: { item: CatalogueItem; onAddToList: () => void; viewMode: ViewMode; isInList?: boolean }) {
   const [avail, setAvail] = useState<boolean | null | 'checking'>('checking')
   const [imgFailed, setImgFailed] = useState(false)
 
@@ -779,11 +785,15 @@ function CatalogCard({ item, onAddToList, viewMode }: { item: CatalogueItem; onA
             style={{
               position: 'absolute', bottom: '6px', right: '6px',
               width: '28px', height: '28px', borderRadius: '50%',
-              background: 'rgba(255,255,255,0.92)', border: 'none', cursor: 'pointer',
-              color: 'var(--navy)',
+              background: isInList ? 'rgba(34,197,94,0.18)' : 'rgba(255,255,255,0.92)',
+              border: 'none', cursor: 'pointer',
+              color: isInList ? 'var(--green)' : 'var(--navy)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}
-          ><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><line x1="6" y1="1" x2="6" y2="11"/><line x1="1" y1="6" x2="11" y2="6"/></svg></button>
+          >{isInList
+            ? <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="2,6 5,9 10,3"/></svg>
+            : <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><line x1="6" y1="1" x2="6" y2="11"/><line x1="1" y1="6" x2="11" y2="6"/></svg>
+          }</button>
         </div>
         <div style={{ padding: '5px 2px 0' }}>
           <div style={{
@@ -842,11 +852,15 @@ function CatalogCard({ item, onAddToList, viewMode }: { item: CatalogueItem; onA
         onClick={e => { e.stopPropagation(); onAddToList() }}
         style={{
           width: '28px', height: '28px', borderRadius: '50%', flexShrink: 0,
-          background: 'var(--tab-inactive-bg)', border: 'none', cursor: 'pointer',
-          color: 'var(--navy)',
+          background: isInList ? 'rgba(34,197,94,0.12)' : 'var(--tab-inactive-bg)',
+          border: 'none', cursor: 'pointer',
+          color: isInList ? 'var(--green)' : 'var(--navy)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}
-      ><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><line x1="6" y1="1" x2="6" y2="11"/><line x1="1" y1="6" x2="11" y2="6"/></svg></button>
+      >{isInList
+        ? <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="2,6 5,9 10,3"/></svg>
+        : <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><line x1="6" y1="1" x2="6" y2="11"/><line x1="1" y1="6" x2="11" y2="6"/></svg>
+      }</button>
     </div>
   )
 }
