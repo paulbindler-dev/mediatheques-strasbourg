@@ -279,29 +279,23 @@ export default function EnviesPage() {
       if (match) {
         let holdAvail: boolean | null | undefined = undefined
         let holdDue: string | null = null
-        for (let attempt = 0; attempt < 2; attempt++) {
-          if (attempt > 0) await new Promise(r => setTimeout(r, 700))
-          try {
-            const hRes = await fetch(`/api/catalogue/holdings?rscId=${encodeURIComponent(match.rscId)}`)
-            const h = await hRes.json() as {
-              available?: boolean | null; dueDate?: string | null
-              locations?: { site: string; available: boolean }[]
+        try {
+          const hRes = await fetch(`/api/catalogue/holdings?rscId=${encodeURIComponent(match.rscId)}`)
+          const h = await hRes.json() as {
+            available?: boolean | null; dueDate?: string | null
+            locations?: { site: string; available: boolean }[]
+          }
+          if (hRes.ok && h.available !== null && h.available !== undefined) {
+            holdAvail = h.available; holdDue = h.dueDate ?? null
+            if (h.locations && h.locations.length > 0) {
+              const mAvail = h.locations.some(l => l.site.includes('Malraux') && l.available)
+              const nAvail = h.locations.some(l => l.site.includes('Neudorf') && l.available)
+              if (mAvail && nAvail) foundAt = 'both'
+              else if (mAvail) foundAt = 'André Malraux'
+              else if (nAvail) foundAt = 'Neudorf'
             }
-            if (hRes.ok && h.available !== null && h.available !== undefined) {
-              holdAvail = h.available; holdDue = h.dueDate ?? null
-              // Derive per-library foundAt from holdings locations
-              if (h.locations && h.locations.length > 0) {
-                const mAvail = h.locations.some(l => l.site.includes('Malraux') && l.available)
-                const nAvail = h.locations.some(l => l.site.includes('Neudorf') && l.available)
-                if (mAvail && nAvail) foundAt = 'both'
-                else if (mAvail) foundAt = 'André Malraux'
-                else if (nAvail) foundAt = 'Neudorf'
-                // else keep foundAt from search (item exists there, all copies loaned)
-              }
-              break
-            }
-          } catch { /* retry */ }
-        }
+          }
+        } catch { /* ignore — keep previous availability */ }
         match = holdAvail !== undefined
           ? { ...match, available: holdAvail, dueDate: holdDue }
           : { ...match, available: item.match?.available, dueDate: item.match?.dueDate ?? null }
@@ -318,7 +312,7 @@ export default function EnviesPage() {
     if (globalChecking) return
     setGlobalChecking(true)
     const toCheck = allItems.filter(i => i.status !== 'checking')
-    const BATCH = 3
+    const BATCH = 6
     for (let i = 0; i < toCheck.length; i += BATCH) {
       await Promise.all(toCheck.slice(i, i + BATCH).map(item => checkItem(item, store.defaultLibrary)))
     }
