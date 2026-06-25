@@ -245,60 +245,62 @@ export default function EnviesPage() {
     const list = store.lists.find(l => l.id === item.listId)
     const queryString = [item.title, list?.queryExtra].filter(Boolean).join(' ')
 
-    async function searchLib(loc: string): Promise<CatalogueItem | null> {
-      const params = new URLSearchParams({
-        q: queryString,
-        type: list?.docType ?? '',
-        subject: list?.subject ?? '',
-        location: loc,
-        size: '10',
-      })
-      const res = await fetch(`/api/catalogue/search?${params}`)
-      const data = await res.json() as { results?: CatalogueItem[]; error?: string }
-      if (data.error) throw new Error(data.error)
-      return (data.results ?? []).find(r => titleMatches(r.title, item.title)) ?? null
+    function fetchWithTimeout(url: string, ms = 12000): Promise<Response> {
+      const ctrl = new AbortController()
+      const t = setTimeout(() => ctrl.abort(), ms)
+      return fetch(url, { signal: ctrl.signal }).finally(() => clearTimeout(t))
     }
 
     try {
       let match: CatalogueItem | null = null
       let foundAt: string | null = null
 
-      if (library === 'malraux_neudorf') {
-        const [mResult, nResult] = await Promise.all([
-          searchLib(LIBRARY_PARAM.malraux),
-          searchLib(LIBRARY_PARAM.neudorf),
-        ])
-        if (mResult && nResult) { match = mResult; foundAt = 'both' }
-        else if (mResult) { match = mResult; foundAt = 'André Malraux' }
-        else if (nResult) { match = nResult; foundAt = 'Neudorf' }
-      } else {
-        match = await searchLib(LIBRARY_PARAM[library])
-        if (match) foundAt = libraryLabel(library)
-      }
+      // Single search — no location filter. GetHoldings will tell us which library has it.
+      // Exception: single-library mode still filters by library.
+      const searchLoc = library === 'malraux_neudorf' ? '' : LIBRARY_PARAM[library]
+      const params = new URLSearchParams({
+        q: queryString,
+        type: list?.docType ?? '',
+        subject: list?.subject ?? '',
+        location: searchLoc,
+        size: '5',
+      })
+      const sRes = await fetchWithTimeout(`/api/catalogue/search?${params}`)
+      const sData = await sRes.json() as { results?: CatalogueItem[]; error?: string }
+      if (sData.error) throw new Error(sData.error)
+      match = (sData.results ?? []).find(r => titleMatches(r.title, item.title)) ?? null
 
       if (match) {
-        let holdAvail: boolean | null | undefined = undefined
-        let holdDue: string | null = null
-        try {
-          const hRes = await fetch(`/api/catalogue/holdings?rscId=${encodeURIComponent(match.rscId)}`)
-          const h = await hRes.json() as {
-            available?: boolean | null; dueDate?: string | null
-            locations?: { site: string; available: boolean }[]
+        const hRes = await fetchWithTimeout(`/api/catalogue/holdings?rscId=${encodeURIComponent(match.rscId)}`)
+        const h = await hRes.json() as {
+          available?: boolean | null; dueDate?: string | null
+          locations?: { site: string; available: boolean }[]
+        }
+
+        if (hRes.ok && h.available !== null && h.available !== undefined) {
+          const locs = h.locations ?? []
+          const mExists = locs.some(l => l.site.includes('Malraux'))
+          const nExists = locs.some(l => l.site.includes('Neudorf'))
+          const mAvail = locs.some(l => l.site.includes('Malraux') && l.available)
+          const nAvail = locs.some(l => l.site.includes('Neudorf') && l.available)
+
+          if (library === 'malraux_neudorf' && !mExists && !nExists) {
+            // Item found in catalog but not at Malraux or Neudorf
+            match = null
+          } else {
+            if (mAvail && nAvail) foundAt = 'both'
+            else if (mAvail) foundAt = 'André Malraux'
+            else if (nAvail) foundAt = 'Neudorf'
+            else if (mExists) foundAt = 'André Malraux'
+            else if (nExists) foundAt = 'Neudorf'
+            else foundAt = libraryLabel(library)
+            match = { ...match, available: h.available, dueDate: h.dueDate ?? null }
           }
-          if (hRes.ok && h.available !== null && h.available !== undefined) {
-            holdAvail = h.available; holdDue = h.dueDate ?? null
-            if (h.locations && h.locations.length > 0) {
-              const mAvail = h.locations.some(l => l.site.includes('Malraux') && l.available)
-              const nAvail = h.locations.some(l => l.site.includes('Neudorf') && l.available)
-              if (mAvail && nAvail) foundAt = 'both'
-              else if (mAvail) foundAt = 'André Malraux'
-              else if (nAvail) foundAt = 'Neudorf'
-            }
-          }
-        } catch { /* ignore — keep previous availability */ }
-        match = holdAvail !== undefined
-          ? { ...match, available: holdAvail, dueDate: holdDue }
-          : { ...match, available: item.match?.available, dueDate: item.match?.dueDate ?? null }
+        } else {
+          // Holdings unavailable — keep previous availability
+          match = { ...match, available: item.match?.available, dueDate: item.match?.dueDate ?? null }
+          foundAt = item.foundAt
+        }
       }
 
       const status: WishlistItem['status'] = match ? 'found' : 'not_found'
