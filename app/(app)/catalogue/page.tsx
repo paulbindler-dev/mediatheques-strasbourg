@@ -214,7 +214,7 @@ export default function CataloguePage() {
 
   function reorderPresets(activeId: string, overId: string) {
     mutatePresetsState(s => {
-      const ids = s.orderedIds.length > 0 ? [...s.orderedIds] : orderedPresets.map(p => p.id)
+      const ids = orderedPresets.map(p => p.id)
       const from = ids.indexOf(activeId)
       const to = ids.indexOf(overId)
       if (from === -1 || to === -1) return s
