@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
-import { Trash2, SlidersHorizontal, Eye, EyeOff } from 'lucide-react'
+import { Trash2, SlidersHorizontal, Eye, EyeOff, Bell } from 'lucide-react'
 import {
   DndContext, closestCenter, PointerSensor, TouchSensor,
   useSensor, useSensors, type DragEndEvent,
@@ -146,7 +146,13 @@ function SortableListRow({
 
 export default function EnviesPage() {
   const [store, setStore] = useState<WishlistStore>(() => ({ lists: DEFAULT_LISTS, items: [], defaultLibrary: 'malraux_neudorf' }))
-  const [activeList, setActiveList] = useState<string>('jeux')
+  const [activeList, setActiveListRaw] = useState<string>(() => {
+    try { return localStorage.getItem('envies_active_list') ?? DEFAULT_LISTS[0].id } catch { return DEFAULT_LISTS[0].id }
+  })
+  function setActiveList(id: string) {
+    setActiveListRaw(id)
+    try { localStorage.setItem('envies_active_list', id) } catch {}
+  }
   const [searchFilter, setSearchFilter] = useState('')
   const [globalChecking, setGlobalChecking] = useState(false)
   const [showNewListModal, setShowNewListModal] = useState(false)
@@ -155,6 +161,7 @@ export default function EnviesPage() {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
   const [showManageModal, setShowManageModal] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>('dots')
+  const [watchedRscIds, setWatchedRscIds] = useState<Set<string>>(new Set())
   const dndSensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } }),
@@ -183,6 +190,26 @@ export default function EnviesPage() {
   }, [viewMode])
 
   useEffect(() => {
+    fetch('/api/watched-items')
+      .then(r => r.ok ? r.json() : { rscIds: [] })
+      .then((d: { rscIds?: string[] }) => {
+        if (d.rscIds?.length) setWatchedRscIds(new Set(d.rscIds))
+      })
+      .catch(() => {})
+  }, [])
+
+  async function toggleWatch(rscId: string, title: string) {
+    const isWatching = watchedRscIds.has(rscId)
+    if (isWatching) {
+      setWatchedRscIds(prev => { const s = new Set(prev); s.delete(rscId); return s })
+      await fetch('/api/watched-items', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rscId }) }).catch(() => {})
+    } else {
+      setWatchedRscIds(prev => new Set(Array.from(prev).concat(rscId)))
+      await fetch('/api/watched-items', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rscId, title }) }).catch(() => {})
+    }
+  }
+
+  useEffect(() => {
     const local = migrateOldData(loadStore())
     setStore(local)
     loadFromCloud().then(cloud => {
@@ -195,6 +222,7 @@ export default function EnviesPage() {
       setStore(prev => {
         const merged = mergeStores(prev, cloud)
         saveStore(merged)
+        setActiveListRaw(cur => merged.lists.find(l => l.id === cur) ? cur : (merged.lists[0]?.id ?? cur))
         return merged
       })
     }).catch(() => {})
@@ -294,7 +322,12 @@ export default function EnviesPage() {
             else if (mExists) foundAt = 'André Malraux'
             else if (nExists) foundAt = 'Neudorf'
             else foundAt = libraryLabel(library)
-            match = { ...match, available: h.available, dueDate: h.dueDate ?? null }
+            // Available = true only if a copy exists at the selected library
+            const libAvailable = library === 'malraux' ? mAvail
+              : library === 'neudorf' ? nAvail
+              : library === 'malraux_neudorf' ? (mAvail || nAvail)
+              : (h.available ?? false)
+            match = { ...match, available: libAvailable, dueDate: h.dueDate ?? null }
           }
         } else {
           // Holdings unavailable — keep previous availability
@@ -649,7 +682,9 @@ export default function EnviesPage() {
                       <Section label="Disponible" count={available.length} accent="var(--green)" viewMode={viewMode}>
                         {available.map(item => (
                           <ItemCard key={item.id} item={item} listDocType={currentList?.docType ?? ''}
-                            onRemove={id => mutate(s => removeItem(s, id))} viewMode={viewMode} />
+                            onRemove={id => mutate(s => removeItem(s, id))} viewMode={viewMode}
+            isWatched={watchedRscIds.has(item.match?.rscId ?? '')}
+            onToggleWatch={item.match?.rscId ? () => toggleWatch(item.match!.rscId, item.title) : undefined} />
                         ))}
                       </Section>
                     )}
@@ -657,7 +692,9 @@ export default function EnviesPage() {
                       <Section label="Emprunté" count={loaned.length} accent="var(--orange)" viewMode={viewMode}>
                         {loaned.map(item => (
                           <ItemCard key={item.id} item={item} listDocType={currentList?.docType ?? ''}
-                            onRemove={id => mutate(s => removeItem(s, id))} viewMode={viewMode} />
+                            onRemove={id => mutate(s => removeItem(s, id))} viewMode={viewMode}
+            isWatched={watchedRscIds.has(item.match?.rscId ?? '')}
+            onToggleWatch={item.match?.rscId ? () => toggleWatch(item.match!.rscId, item.title) : undefined} />
                         ))}
                       </Section>
                     )}
@@ -665,7 +702,9 @@ export default function EnviesPage() {
                       <Section label="Au catalogue" count={unknown.length} accent="var(--text-2)" viewMode={viewMode}>
                         {unknown.map(item => (
                           <ItemCard key={item.id} item={item} listDocType={currentList?.docType ?? ''}
-                            onRemove={id => mutate(s => removeItem(s, id))} viewMode={viewMode} />
+                            onRemove={id => mutate(s => removeItem(s, id))} viewMode={viewMode}
+            isWatched={watchedRscIds.has(item.match?.rscId ?? '')}
+            onToggleWatch={item.match?.rscId ? () => toggleWatch(item.match!.rscId, item.title) : undefined} />
                         ))}
                       </Section>
                     )}
@@ -677,7 +716,9 @@ export default function EnviesPage() {
                 <Section label="Pas trouvé" count={notFound.length} accent="var(--text-2)" viewMode={viewMode}>
                   {notFound.map(item => (
                     <ItemCard key={item.id} item={item} listDocType={currentList?.docType ?? ''}
-                      onRemove={id => mutate(s => removeItem(s, id))} viewMode={viewMode} />
+                      onRemove={id => mutate(s => removeItem(s, id))} viewMode={viewMode}
+            isWatched={watchedRscIds.has(item.match?.rscId ?? '')}
+            onToggleWatch={item.match?.rscId ? () => toggleWatch(item.match!.rscId, item.title) : undefined} />
                   ))}
                 </Section>
               )}
@@ -686,7 +727,9 @@ export default function EnviesPage() {
                 <Section label="En attente" count={pending.length} accent="var(--text-2)" viewMode={viewMode}>
                   {pending.map(item => (
                     <ItemCard key={item.id} item={item} listDocType={currentList?.docType ?? ''}
-                      onRemove={id => mutate(s => removeItem(s, id))} viewMode={viewMode} />
+                      onRemove={id => mutate(s => removeItem(s, id))} viewMode={viewMode}
+            isWatched={watchedRscIds.has(item.match?.rscId ?? '')}
+            onToggleWatch={item.match?.rscId ? () => toggleWatch(item.match!.rscId, item.title) : undefined} />
                   ))}
                 </Section>
               )}
@@ -697,11 +740,12 @@ export default function EnviesPage() {
 
       {/* Manage lists modal */}
       {showManageModal && (
-        <div style={{
+        <div className="overlay-enter" style={{
           position: 'fixed', inset: 0, background: 'var(--overlay)',
           display: 'flex', alignItems: 'flex-end', zIndex: 200,
         }} onClick={() => setShowManageModal(false)}>
           <div
+            className="sheet-enter"
             style={{ background: 'var(--surface)', width: '100%', borderRadius: '16px 16px 0 0', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}
             onClick={e => e.stopPropagation()}
           >
@@ -747,11 +791,12 @@ export default function EnviesPage() {
         if (!list) return null
         const itemCount = store.items.filter(i => i.listId === deleteConfirmId).length
         return (
-          <div style={{
+          <div className="overlay-enter" style={{
             position: 'fixed', inset: 0, background: 'var(--overlay)',
             display: 'flex', alignItems: 'flex-end', zIndex: 200,
           }} onClick={() => setDeleteConfirmId(null)}>
             <div
+              className="sheet-enter"
               style={{ background: 'var(--surface)', width: '100%', padding: '24px', borderRadius: '16px 16px 0 0' }}
               onClick={e => e.stopPropagation()}
             >
@@ -796,11 +841,12 @@ export default function EnviesPage() {
 
       {/* New list modal */}
       {showNewListModal && (
-        <div style={{
+        <div className="overlay-enter" style={{
           position: 'fixed', inset: 0, background: 'var(--overlay)',
           display: 'flex', alignItems: 'flex-end', zIndex: 200,
         }} onClick={() => setShowNewListModal(false)}>
           <div
+            className="sheet-enter"
             style={{ background: 'var(--surface)', width: '100%', padding: '24px', borderRadius: '16px 16px 0 0' }}
             onClick={e => e.stopPropagation()}
           >
@@ -875,9 +921,8 @@ function Section({ label, count, accent, viewMode, children }: {
   return (
     <div style={{ marginBottom: '16px' }}>
       <div style={{
-        fontSize: '10px', fontWeight: 700, color: 'var(--text-2)',
-        textTransform: 'uppercase', letterSpacing: '0.1em',
-        marginBottom: '6px', fontFamily: 'DM Mono, monospace', paddingLeft: '2px',
+        fontSize: '11px', fontWeight: 700, color: 'var(--text-2)',
+        marginBottom: '6px', fontFamily: 'DM Sans, sans-serif', paddingLeft: '2px',
       }}>
         {label} <span style={{ color: accent }}>· {count}</span>
       </div>
@@ -915,11 +960,15 @@ function ItemCard({
   listDocType,
   onRemove,
   viewMode,
+  isWatched,
+  onToggleWatch,
 }: {
   item: WishlistItem
   listDocType: string
   onRemove: (id: string) => void
   viewMode: ViewMode
+  isWatched?: boolean
+  onToggleWatch?: () => void
 }) {
   const [swipeX, setSwipeX] = useState(0)
   const [animating, setAnimating] = useState(false)
@@ -1132,6 +1181,21 @@ function ItemCard({
           )}
         </div>
 
+        {onToggleWatch && (
+          <button
+            onClick={e => { e.stopPropagation(); onToggleWatch() }}
+            style={{
+              width: '28px', height: '28px', borderRadius: '50%', flexShrink: 0,
+              background: isWatched ? 'var(--orange)' : 'var(--tab-inactive-bg)',
+              border: 'none', cursor: 'pointer',
+              color: isWatched ? 'white' : 'var(--navy)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}
+            title={isWatched ? 'Désactiver la notification' : 'Notifier quand disponible'}
+          >
+            <Bell size={13} strokeWidth={1.5} fill={isWatched ? 'currentColor' : 'none'} />
+          </button>
+        )}
         <button
           className="desktop-trash-btn"
           onClick={e => { e.stopPropagation(); handleDelete() }}

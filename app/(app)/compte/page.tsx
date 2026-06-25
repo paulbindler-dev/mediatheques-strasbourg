@@ -94,8 +94,8 @@ export default function ComptePage() {
         </div>
         <div style={{ display: 'flex', gap: '6px', marginTop: '14px', paddingBottom: '14px' }}>
           {([
-            ['reservations', `Réservations (${bookings.length})`],
-            ['prets', `Prêts (${loans.length})`],
+            ['reservations', loading ? 'Réservations' : `Réservations (${bookings.length})`],
+            ['prets', loading ? 'Prêts' : `Prêts (${loans.length})`],
           ] as const).map(([t, label]) => (
             <button key={t} onClick={() => setTab(t)} style={{
               fontSize: '10.5px', fontWeight: 600,

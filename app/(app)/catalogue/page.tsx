@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
-import { SlidersHorizontal, Eye, EyeOff } from 'lucide-react'
+import { SlidersHorizontal, Eye, EyeOff, Plus, Check } from 'lucide-react'
 import {
   DndContext, closestCenter, PointerSensor, TouchSensor,
   useSensor, useSensors, type DragEndEvent,
@@ -166,6 +166,8 @@ export default function CataloguePage() {
   const [newPresetName, setNewPresetName] = useState('')
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
   const [showManagePresets, setShowManagePresets] = useState(false)
+  const [showCreatePreset, setShowCreatePreset] = useState(false)
+  const [newCustomForm, setNewCustomForm] = useState({ label: '', icon: '⭐', type: '', subject: '', query: '' })
   const [presetsState, setPresetsState] = useState<PresetsState>({ hiddenIds: [], orderedIds: [] })
   const [viewMode, setViewMode] = useState<ViewMode>('dots')
   const [inListTitles, setInListTitles] = useState<Set<string>>(() => {
@@ -335,6 +337,27 @@ export default function CataloguePage() {
     setShowAddModal(null)
   }, [])
 
+  function createCustomPreset() {
+    const name = newCustomForm.label.trim()
+    if (!name) return
+    const newP: FilterPreset = {
+      id: `custom_${Date.now()}`,
+      label: name,
+      icon: newCustomForm.icon,
+      type: newCustomForm.type,
+      subject: newCustomForm.subject,
+      query: newCustomForm.query,
+      custom: true,
+    }
+    const updated = [...customPresets, newP]
+    setCustomPresets(updated)
+    saveCustomPresets(updated)
+    setPreset(newP.id)
+    setShowCreatePreset(false)
+    setNewCustomForm({ label: '', icon: '⭐', type: '', subject: '', query: '' })
+    scheduleCloudSave()
+  }
+
   function saveCurrentAsPreset() {
     const name = newPresetName.trim()
     if (!name) return
@@ -344,7 +367,7 @@ export default function CataloguePage() {
       icon: '⭐',
       type: currentPreset.type,
       subject: currentPreset.subject,
-      query: currentPreset.query,
+      query: [currentPreset.query, input].filter(Boolean).join(' '),
       custom: true,
     }
     const updated = [...customPresets, newP]
@@ -449,7 +472,7 @@ export default function CataloguePage() {
               {p.label}
             </button>
           ))}
-          {(currentPreset.type || currentPreset.subject || currentPreset.query) && !currentPreset.custom && (
+          {(currentPreset.type || currentPreset.subject || currentPreset.query || input) && !currentPreset.custom && (
             <button
               onClick={() => setShowSaveModal(true)}
               style={{
@@ -550,6 +573,7 @@ export default function CataloguePage() {
                   onAddToList={() => setShowAddModal(item)}
                   viewMode={viewMode}
                   isInList={inListTitles.has(item.title.toLowerCase())}
+                  library={library}
                 />
               ))}
             </div>
@@ -583,11 +607,12 @@ export default function CataloguePage() {
 
       {/* Manage presets modal */}
       {showManagePresets && (
-        <div style={{
+        <div className="overlay-enter" style={{
           position: 'fixed', inset: 0, background: 'var(--overlay)',
           display: 'flex', alignItems: 'flex-end', zIndex: 200,
         }} onClick={() => setShowManagePresets(false)}>
           <div
+            className="sheet-enter"
             style={{ background: 'var(--surface)', width: '100%', borderRadius: '16px 16px 0 0', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}
             onClick={e => e.stopPropagation()}
           >
@@ -622,6 +647,19 @@ export default function CataloguePage() {
                   ))}
                 </SortableContext>
               </DndContext>
+              <div style={{ borderTop: '1px solid var(--border)', marginTop: '8px', paddingTop: '12px' }}>
+                <button
+                  onClick={() => { setShowManagePresets(false); setShowCreatePreset(true) }}
+                  style={{
+                    width: '100%', padding: '11px', background: 'transparent',
+                    border: '1.5px dashed var(--border)', borderRadius: 'var(--radius-sm)',
+                    fontSize: '13px', fontWeight: 600, color: 'var(--text-2)',
+                    cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
+                  }}
+                >
+                  + Créer un filtre
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -632,11 +670,12 @@ export default function CataloguePage() {
         const p = customPresets.find(p => p.id === deleteConfirmId)
         if (!p) return null
         return (
-          <div style={{
+          <div className="overlay-enter" style={{
             position: 'fixed', inset: 0, background: 'var(--overlay)',
             display: 'flex', alignItems: 'flex-end', zIndex: 200,
           }} onClick={() => setDeleteConfirmId(null)}>
             <div
+              className="sheet-enter"
               style={{ background: 'var(--surface)', width: '100%', padding: '24px', borderRadius: '16px 16px 0 0' }}
               onClick={e => e.stopPropagation()}
             >
@@ -675,11 +714,12 @@ export default function CataloguePage() {
 
       {/* Save preset modal */}
       {showSaveModal && (
-        <div style={{
+        <div className="overlay-enter" style={{
           position: 'fixed', inset: 0, background: 'var(--overlay)',
           display: 'flex', alignItems: 'flex-end', zIndex: 200,
         }} onClick={() => setShowSaveModal(false)}>
           <div
+            className="sheet-enter"
             style={{ background: 'var(--surface)', width: '100%', padding: '24px', borderRadius: '16px 16px 0 0' }}
             onClick={e => e.stopPropagation()}
           >
@@ -719,6 +759,82 @@ export default function CataloguePage() {
         </div>
       )}
 
+      {/* Create preset modal */}
+      {showCreatePreset && (
+        <div className="overlay-enter" style={{
+          position: 'fixed', inset: 0, background: 'var(--overlay)',
+          display: 'flex', alignItems: 'flex-end', zIndex: 200,
+        }} onClick={() => setShowCreatePreset(false)}>
+          <div
+            className="sheet-enter"
+            style={{ background: 'var(--surface)', width: '100%', padding: '24px', borderRadius: '16px 16px 0 0', maxHeight: '90vh', overflowY: 'auto' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+              <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-heading)' }}>Nouveau filtre</div>
+              <button onClick={() => setShowCreatePreset(false)} style={{ background: 'none', border: 'none', fontSize: '20px', color: 'var(--text-2)', cursor: 'pointer', lineHeight: 1 }}>×</button>
+            </div>
+            {/* Icon picker */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '14px' }}>
+              {LIST_ICONS.map(ic => (
+                <button key={ic} onClick={() => setNewCustomForm(f => ({ ...f, icon: ic }))}
+                  style={{ width: '36px', height: '36px', borderRadius: '8px', fontSize: '18px',
+                    border: newCustomForm.icon === ic ? '2px solid var(--navy)' : '1.5px solid var(--border)',
+                    background: newCustomForm.icon === ic ? 'var(--tab-inactive-bg)' : 'transparent',
+                    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                >{ic}</button>
+              ))}
+            </div>
+            {/* Label */}
+            <input type="text" value={newCustomForm.label}
+              onChange={e => setNewCustomForm(f => ({ ...f, label: e.target.value }))}
+              placeholder="Nom du filtre…"
+              autoFocus
+              onKeyDown={e => e.key === 'Enter' && createCustomPreset()}
+              style={{ width: '100%', padding: '10px 14px', borderRadius: 'var(--radius-sm)',
+                border: '1.5px solid var(--border)', fontSize: '14px',
+                background: 'var(--bg)', color: 'var(--text)',
+                fontFamily: 'DM Sans, sans-serif', outline: 'none', marginBottom: '10px', boxSizing: 'border-box' }}
+            />
+            {/* Type */}
+            <select value={newCustomForm.type}
+              onChange={e => setNewCustomForm(f => ({ ...f, type: e.target.value }))}
+              style={{ width: '100%', padding: '10px 14px', borderRadius: 'var(--radius-sm)',
+                border: '1.5px solid var(--border)', fontSize: '13px',
+                background: 'var(--bg)', color: newCustomForm.type ? 'var(--text)' : 'var(--text-2)',
+                fontFamily: 'DM Sans, sans-serif', outline: 'none', marginBottom: '10px' }}
+            >
+              <option value="">Tous types</option>
+              <option value="Jeu vidéo">Jeu vidéo</option>
+              <option value="Vidéo">Vidéo</option>
+              <option value="BD ou manga">BD ou manga</option>
+              <option value="Livre">Livre</option>
+              <option value="Musique">Musique</option>
+              <option value="Livre audio numérique">Livre audio numérique</option>
+            </select>
+            {/* Keyword */}
+            <input type="text" value={newCustomForm.query}
+              onChange={e => setNewCustomForm(f => ({ ...f, query: e.target.value }))}
+              placeholder="Mot-clé (optionnel)…"
+              style={{ width: '100%', padding: '10px 14px', borderRadius: 'var(--radius-sm)',
+                border: '1.5px solid var(--border)', fontSize: '14px',
+                background: 'var(--bg)', color: 'var(--text)',
+                fontFamily: 'DM Sans, sans-serif', outline: 'none', marginBottom: '16px', boxSizing: 'border-box' }}
+            />
+            <button
+              onClick={createCustomPreset}
+              disabled={!newCustomForm.label.trim()}
+              style={{ width: '100%', padding: '12px', background: 'var(--navy)', color: 'white',
+                border: 'none', borderRadius: 'var(--radius-sm)', fontSize: '14px',
+                fontWeight: 700, cursor: !newCustomForm.label.trim() ? 'not-allowed' : 'pointer',
+                opacity: !newCustomForm.label.trim() ? 0.45 : 1, fontFamily: 'DM Sans, sans-serif' }}
+            >
+              Créer
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Toast */}
       {addToast && (
         <div style={{
@@ -737,7 +853,7 @@ export default function CataloguePage() {
   )
 }
 
-function CatalogCard({ item, onAddToList, viewMode, isInList }: { item: CatalogueItem; onAddToList: () => void; viewMode: ViewMode; isInList?: boolean }) {
+function CatalogCard({ item, onAddToList, viewMode, isInList, library }: { item: CatalogueItem; onAddToList: () => void; viewMode: ViewMode; isInList?: boolean; library: LibraryKey }) {
   const [avail, setAvail] = useState<boolean | null | 'checking'>('checking')
   const [imgFailed, setImgFailed] = useState(false)
 
@@ -745,12 +861,29 @@ function CatalogCard({ item, onAddToList, viewMode, isInList }: { item: Catalogu
     let cancelled = false
     fetch(`/api/catalogue/holdings?rscId=${encodeURIComponent(item.rscId)}`)
       .then(r => r.json())
-      .then((data: { available?: boolean | null }) => {
-        if (!cancelled) setAvail(data.available ?? null)
+      .then((data: { available?: boolean | null; locations?: { site: string; available: boolean }[] }) => {
+        if (cancelled) return
+        const locs = data.locations ?? []
+        if (locs.length > 0 && library !== 'all') {
+          // Filter by selected library — show green only if relevant site is available
+          const hasMalraux = (l: { site: string }) => l.site.includes('Malraux')
+          const hasNeudorf = (l: { site: string }) => l.site.includes('Neudorf')
+          let relevant: boolean
+          if (library === 'malraux_neudorf') {
+            relevant = locs.some(l => (hasMalraux(l) || hasNeudorf(l)) && l.available)
+          } else if (library === 'malraux') {
+            relevant = locs.some(l => hasMalraux(l) && l.available)
+          } else {
+            relevant = locs.some(l => hasNeudorf(l) && l.available)
+          }
+          setAvail(relevant)
+        } else {
+          setAvail(data.available ?? null)
+        }
       })
       .catch(() => { if (!cancelled) setAvail(null) })
     return () => { cancelled = true }
-  }, [item.rscId])
+  }, [item.rscId, library])
 
   const dotColor = avail === true ? 'var(--green)'
     : avail === false ? 'var(--orange)'
@@ -786,14 +919,14 @@ function CatalogCard({ item, onAddToList, viewMode, isInList }: { item: Catalogu
             style={{
               position: 'absolute', bottom: '6px', right: '6px',
               width: '28px', height: '28px', borderRadius: '50%',
-              background: isInList ? 'rgba(34,197,94,0.18)' : 'rgba(255,255,255,0.92)',
+              background: isInList ? 'var(--green-subtle)' : 'rgba(255,255,255,0.92)',
               border: 'none', cursor: 'pointer',
               color: isInList ? 'var(--green)' : 'var(--navy)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}
           >{isInList
-            ? <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="2,6 5,9 10,3"/></svg>
-            : <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><line x1="6" y1="1" x2="6" y2="11"/><line x1="1" y1="6" x2="11" y2="6"/></svg>
+            ? <Check size={13} strokeWidth={1.5} />
+            : <Plus size={13} strokeWidth={1.5} />
           }</button>
         </div>
         <div style={{ padding: '5px 2px 0' }}>
@@ -853,14 +986,14 @@ function CatalogCard({ item, onAddToList, viewMode, isInList }: { item: Catalogu
         onClick={e => { e.stopPropagation(); onAddToList() }}
         style={{
           width: '28px', height: '28px', borderRadius: '50%', flexShrink: 0,
-          background: isInList ? 'rgba(34,197,94,0.12)' : 'var(--tab-inactive-bg)',
+          background: isInList ? 'var(--green-subtle)' : 'var(--tab-inactive-bg)',
           border: 'none', cursor: 'pointer',
           color: isInList ? 'var(--green)' : 'var(--navy)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}
       >{isInList
-        ? <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="2,6 5,9 10,3"/></svg>
-        : <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><line x1="6" y1="1" x2="6" y2="11"/><line x1="1" y1="6" x2="11" y2="6"/></svg>
+        ? <Check size={13} strokeWidth={1.5} />
+        : <Plus size={13} strokeWidth={1.5} />
       }</button>
     </div>
   )
@@ -888,11 +1021,12 @@ function AddToListModal({ item, onAdd, onClose }: {
   }
 
   return (
-    <div style={{
+    <div className="overlay-enter" style={{
       position: 'fixed', inset: 0, background: 'var(--overlay)',
       display: 'flex', alignItems: 'flex-end', zIndex: 200,
     }} onClick={onClose}>
       <div
+        className="sheet-enter"
         style={{ background: 'var(--surface)', width: '100%', padding: '20px', borderRadius: '16px 16px 0 0', maxHeight: '80vh', overflowY: 'auto' }}
         onClick={e => e.stopPropagation()}
       >

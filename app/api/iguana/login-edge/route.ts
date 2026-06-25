@@ -48,7 +48,6 @@ async function loginFromEdge(cardNumber: string, password: string) {
     throw new Error('Impossible d\'établir une session avec le site médiathèque')
   }
 
-  console.log('[login-edge] step1 cookies:', Object.keys(jar).join(', '))
 
   // Step 2: JSON login
   const loginRes = await fetch(`${BASE}/Portal/Recherche/logon.svc/logon`, {
@@ -68,7 +67,6 @@ async function loginFromEdge(cardNumber: string, password: string) {
   if (!loginRes.ok) throw new Error(`Erreur HTTP ${loginRes.status}`)
 
   const json = await loginRes.json() as { success: boolean; d?: string; errors?: { type?: string; msg?: string }[] }
-  console.log('[login-edge] logon response: success=', json.success, 'd=', json.d, 'errors=', JSON.stringify(json.errors))
   if (!json.success || json.d === 'Anonymous') {
     const errType = json.errors?.[0]?.type
     if (errType === 'InvalidCredentials') throw new Error('Numéro de carte ou mot de passe incorrect')

@@ -59,8 +59,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const testResult = await fetchBookings({ ci, st, extra })
-    console.log('[session] Fresh cookie test: OK, bookings=', testResult.length)
+    await fetchBookings({ ci, st, extra })
   } catch (e) {
     console.error('[session] Fresh cookie test FAILED:', String(e))
   }

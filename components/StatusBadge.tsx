@@ -1,9 +1,9 @@
 type Variant = 'red' | 'green' | 'gray'
 
 const STYLES: Record<Variant, { bg: string; color: string; dot: string }> = {
-  red:   { bg: 'rgba(239,68,68,0.1)',    color: '#b91c1c', dot: '#EF4444' },
-  green: { bg: 'rgba(34,197,94,0.1)',    color: '#15803d', dot: '#22C55E' },
-  gray:  { bg: 'var(--tab-inactive-bg)', color: 'var(--text-2)', dot: '#9CA3AF' },
+  red:   { bg: 'var(--badge-red-bg)',    color: 'var(--badge-red-color)',   dot: 'var(--red)'   },
+  green: { bg: 'var(--badge-green-bg)',  color: 'var(--badge-green-color)', dot: 'var(--green)' },
+  gray:  { bg: 'var(--tab-inactive-bg)', color: 'var(--text-2)',            dot: 'var(--border)' },
 }
 
 export default function StatusBadge({ variant, label }: { variant: Variant; label: string }) {

@@ -76,9 +76,6 @@ export default function OnboardingPage() {
 
   return (
     <div style={{ padding: '24px', maxWidth: '480px', margin: '0 auto' }}>
-      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '9px', color: 'var(--text-2)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '8px' }}>
-        Configuration
-      </div>
       <h1 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--color-heading)', marginBottom: '8px', letterSpacing: '-0.4px' }}>
         Connecte ta médiathèque
       </h1>
