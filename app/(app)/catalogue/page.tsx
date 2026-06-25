@@ -753,7 +753,7 @@ function CatalogCard({ item, onAddToList, viewMode }: { item: CatalogueItem; onA
             <img
               src={item.thumbnail}
               onError={() => setImgFailed(true)}
-              style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
+              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
               alt=""
             />
           ) : (
@@ -782,6 +782,15 @@ function CatalogCard({ item, onAddToList, viewMode }: { item: CatalogueItem; onA
           }}>
             {item.title}
           </div>
+          {item.creator && (
+            <div style={{
+              fontSize: viewMode === 'grid3' ? '9.5px' : '10.5px',
+              color: 'var(--text-2)', marginTop: '2px',
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            }}>
+              {item.creator}
+            </div>
+          )}
         </div>
       </div>
     )
