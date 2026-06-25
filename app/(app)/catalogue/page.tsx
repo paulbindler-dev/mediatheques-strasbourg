@@ -328,7 +328,7 @@ export default function CataloguePage() {
     const store = loadStore()
     const updated = addItem(store, listId, item.title)
     saveStore(updated)
-    setInListTitles(prev => new Set([...prev, item.title.toLowerCase()]))
+    setInListTitles(prev => { const next = new Set(prev); next.add(item.title.toLowerCase()); return next })
     setAddToast(`"${item.title}" ajouté`)
     setTimeout(() => setAddToast(null), 2500)
     setShowAddModal(null)
