@@ -2,6 +2,13 @@ import StatusBadge from './StatusBadge'
 import { parseIguanaDate, formatDate, getDaysUntil, type IguanaLoan } from '@/lib/iguana'
 import { typeBadge } from './ViewModeToggle'
 
+function shortLoc(loc: string | undefined | null): string {
+  const l = (loc ?? '').toLowerCase()
+  if (l.includes('neudorf')) return 'Neudorf'
+  if (l.includes('malraux')) return 'Malraux'
+  return loc ?? ''
+}
+
 export default function LoanCard({ l }: { l: IguanaLoan }) {
   const dueDate = parseIguanaDate(l.WhenBack)
   const daysLeft = dueDate ? getDaysUntil(dueDate) : null
@@ -15,8 +22,10 @@ export default function LoanCard({ l }: { l: IguanaLoan }) {
   }
 
   const thumb = l.ThumbnailUrl || l.DefaultThumbnailUrl
-  const isNeudorf = (l.Location ?? '').toLowerCase().includes('neudorf')
+  const locLabel = shortLoc(l.Location)
+  const isNeudorf = locLabel === 'Neudorf'
   const dotColor = variant === 'green' ? 'var(--green)' : variant === 'red' ? 'var(--red)' : 'var(--border)'
+  const typeLabel = typeBadge(l.TypeOfDocument ?? '', '')
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 14px' }}>
@@ -28,17 +37,13 @@ export default function LoanCard({ l }: { l: IguanaLoan }) {
         alt=""
       />
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-heading)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', letterSpacing: '-0.2px' }}>
+        <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-heading)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', letterSpacing: '-0.2px' }}>
           {l.Title}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '2px', overflow: 'hidden' }}>
-          <span style={{ fontSize: '9px', fontWeight: 700, padding: '2px 6px', borderRadius: '20px', background: 'var(--tab-inactive-bg)', color: 'var(--text-2)', whiteSpace: 'nowrap', flexShrink: 0 }}>
-            {typeBadge(l.TypeOfDocument ?? '', '')}
-          </span>
-          {l.Location && (
-            <span style={{ fontSize: '12px', color: isNeudorf ? 'var(--neudorf)' : 'var(--text-2)', fontWeight: isNeudorf ? 700 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {l.Location}
-            </span>
+        <div style={{ fontSize: '11.5px', color: 'var(--text-2)', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {typeLabel}
+          {locLabel && (
+            <> · <span style={{ color: isNeudorf ? 'var(--neudorf)' : 'var(--text-2)', fontWeight: isNeudorf ? 700 : 400 }}>{locLabel}</span></>
           )}
         </div>
         <div style={{ marginTop: '6px' }}>

@@ -3,7 +3,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { SlidersHorizontal, Eye, EyeOff, ChevronUp, ChevronDown } from 'lucide-react'
 import type { CatalogueItem } from '@/app/api/catalogue/search/route'
 import CoverImg from '@/components/CoverImg'
-import { ViewModeToggle, type ViewMode, TYPE_CONFIG } from '@/components/ViewModeToggle'
+import { ViewModeToggle, type ViewMode, TYPE_CONFIG, typeBadge } from '@/components/ViewModeToggle'
 import { loadStore, saveStore, addItem, addCustomList, libraryLabel, type LibraryKey } from '@/lib/wishlists'
 
 const LIST_ICONS = ['🎮', '🕹️', '🎬', '🎥', '📚', '📖', '🎵', '🎭', '⭐', '❤️', '🔖', '🎯']
@@ -164,10 +164,12 @@ export default function CataloguePage() {
     }, 200)
   }
 
+  const VIEW_CYCLE: ViewMode[] = ['dots', 'list', 'grid2', 'grid3']
+
   useEffect(() => {
     const saved = localStorage.getItem('catalogue_view_mode')
-    if (saved === 'icons') setViewMode('images')
-    else if (saved === 'images' || saved === 'dots') setViewMode(saved as ViewMode)
+    if (saved === 'icons' || saved === 'images') setViewMode('list')
+    else if (['dots', 'list', 'grid2', 'grid3'].includes(saved ?? '')) setViewMode(saved as ViewMode)
   }, [])
 
   useEffect(() => {
@@ -293,7 +295,7 @@ export default function CataloguePage() {
         flexShrink: 0,
       }}>
         <div
-          onClick={() => setViewMode(m => (m === 'dots' ? 'images' : 'dots'))}
+          onClick={() => setViewMode(m => VIEW_CYCLE[(VIEW_CYCLE.indexOf(m) + 1) % VIEW_CYCLE.length])}
           style={{ fontSize: '22px', fontWeight: 800, color: 'var(--color-heading)', letterSpacing: '-0.5px', fontFamily: 'DM Sans, sans-serif', cursor: 'pointer', userSelect: 'none' }}
         >
           Catalogue
@@ -330,6 +332,19 @@ export default function CataloguePage() {
           data-hscroll
           style={{ display: 'flex', gap: '6px', overflowX: 'auto', padding: '10px 16px 0', scrollbarWidth: 'none' }}
         >
+          <button
+            onClick={() => setShowManagePresets(true)}
+            style={{
+              fontSize: '10.5px', fontWeight: 600, flexShrink: 0,
+              padding: '5px 10px', borderRadius: '20px',
+              border: '1.5px solid var(--border)',
+              background: 'transparent', color: 'var(--text-2)',
+              cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
+            }}
+            title="Gérer les filtres"
+          >
+            <SlidersHorizontal size={13} strokeWidth={2} />
+          </button>
           {orderedPresets.filter(p => !p.hidden).map(p => (
             <button
               key={p.id}
@@ -361,19 +376,6 @@ export default function CataloguePage() {
               + Sauvegarder
             </button>
           )}
-          <button
-            onClick={() => setShowManagePresets(true)}
-            style={{
-              fontSize: '10.5px', fontWeight: 600, flexShrink: 0,
-              padding: '5px 10px', borderRadius: '20px',
-              border: '1.5px solid var(--border)',
-              background: 'transparent', color: 'var(--text-2)',
-              cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
-            }}
-            title="Gérer les filtres"
-          >
-            <SlidersHorizontal size={13} strokeWidth={2} />
-          </button>
         </div>
 
         {/* Search input */}
@@ -449,7 +451,11 @@ export default function CataloguePage() {
             <div style={{ fontSize: '10px', color: 'var(--text-2)', fontFamily: 'DM Mono, monospace', marginBottom: '10px' }}>
               {total} résultat{total > 1 ? 's' : ''} · {libraryLabel(library)}
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div style={
+              viewMode === 'grid2' || viewMode === 'grid3'
+                ? { display: 'grid', gridTemplateColumns: viewMode === 'grid3' ? '1fr 1fr 1fr' : '1fr 1fr', gap: viewMode === 'grid3' ? '8px' : '10px' }
+                : { display: 'flex', flexDirection: 'column', gap: '8px' }
+            }>
               {results.map(item => (
                 <CatalogCard
                   key={item.rscId}
@@ -659,13 +665,8 @@ export default function CataloguePage() {
 }
 
 function CatalogCard({ item, onAddToList, viewMode }: { item: CatalogueItem; onAddToList: () => void; viewMode: ViewMode }) {
-  const TYPE_ICON: Record<string, string> = {
-    'Jeu vidéo': '🎮', 'Vidéo': '🎬', 'Livre': '📖',
-    'BD ou manga': '📚', 'Musique': '🎵',
-  }
-  const icon = TYPE_ICON[item.type] ?? '📄'
-
   const [avail, setAvail] = useState<boolean | null | 'checking'>('checking')
+  const [imgFailed, setImgFailed] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -683,7 +684,54 @@ function CatalogCard({ item, onAddToList, viewMode }: { item: CatalogueItem; onA
     : 'var(--border)'
 
   const typeConf = TYPE_CONFIG[item.type]
-  const subtitle = [item.publisher, item.year].filter(Boolean).join(' · ')
+  const typeIcon = typeConf?.emoji ?? '📄'
+  const typeLabel = typeBadge(item.type, item.subject ?? '')
+  const subtitle = [typeLabel, item.year].filter(Boolean).join(' · ')
+
+  if (viewMode === 'grid2' || viewMode === 'grid3') {
+    return (
+      <div
+        onClick={() => item.url && window.open(item.url, '_blank', 'noopener,noreferrer')}
+        style={{ cursor: item.url ? 'pointer' : 'default' }}
+      >
+        <div style={{ position: 'relative', aspectRatio: '2/3', borderRadius: 'var(--radius-sm)', overflow: 'hidden', background: typeConf?.bg ?? 'var(--tab-inactive-bg)' }}>
+          {item.thumbnail && !imgFailed ? (
+            <img
+              src={item.thumbnail}
+              onError={() => setImgFailed(true)}
+              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+              alt=""
+            />
+          ) : (
+            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <span style={{ fontSize: viewMode === 'grid3' ? '24px' : '32px' }}>{typeIcon}</span>
+            </div>
+          )}
+          <div style={{ position: 'absolute', top: '5px', left: '5px', width: '7px', height: '7px', borderRadius: '50%', background: dotColor }} />
+          <button
+            onClick={e => { e.stopPropagation(); onAddToList() }}
+            style={{
+              position: 'absolute', bottom: '6px', right: '6px',
+              width: '28px', height: '28px', borderRadius: '50%',
+              background: 'rgba(255,255,255,0.92)', border: 'none', cursor: 'pointer',
+              color: 'var(--navy)', fontSize: '18px', fontWeight: 700,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
+            }}
+          >+</button>
+        </div>
+        <div style={{ padding: '5px 2px 0' }}>
+          <div style={{
+            fontSize: viewMode === 'grid3' ? '10.5px' : '12px', fontWeight: 600,
+            color: 'var(--color-heading)', lineHeight: 1.3,
+            overflow: 'hidden', display: '-webkit-box',
+            WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const,
+          }}>
+            {item.title}
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div
@@ -696,54 +744,34 @@ function CatalogCard({ item, onAddToList, viewMode }: { item: CatalogueItem; onA
         cursor: item.url ? 'pointer' : 'default',
       }}
     >
-      {/* Status dot */}
       <div style={{
         width: '7px', height: '7px', borderRadius: '50%', flexShrink: 0,
         background: dotColor,
         animation: avail === 'checking' ? 'pulse 1s infinite' : 'none',
       }} />
 
-      {/* Vignette — cover si disponible, tuile TYPE_CONFIG sinon */}
-      {viewMode === 'images' && (
-        <CoverImg thumbnail={item.thumbnail} width={36} height={52} typeIcon={typeConf?.emoji ?? icon} subject={item.subject} typeBg={typeConf?.bg} />
+      {viewMode === 'list' && (
+        <CoverImg thumbnail={item.thumbnail} width={44} height={63} typeIcon={typeIcon} subject={item.subject} typeBg={typeConf?.bg} />
       )}
 
-      {/* Content */}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-heading)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-heading)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', letterSpacing: '-0.2px' }}>
           {item.title}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '2px', overflow: 'hidden' }}>
-          {item.type && (
-            <span style={{
-              fontSize: '9px', fontWeight: 700, padding: '2px 6px',
-              borderRadius: '20px', background: 'var(--tab-inactive-bg)',
-              color: 'var(--text-2)', whiteSpace: 'nowrap', flexShrink: 0,
-            }}>
-              {item.type}
-            </span>
-          )}
-          {subtitle && (
-            <span style={{ fontSize: '12px', color: 'var(--text-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {subtitle}
-            </span>
-          )}
+        <div style={{ fontSize: '11.5px', color: 'var(--text-2)', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {subtitle}
         </div>
       </div>
 
-      {/* + Liste button */}
       <button
         onClick={e => { e.stopPropagation(); onAddToList() }}
         style={{
-          background: 'var(--navy)', color: 'white',
-          border: 'none', borderRadius: '20px',
-          padding: '8px 14px', fontSize: '12px', fontWeight: 700,
-          cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', whiteSpace: 'nowrap',
-          minHeight: '36px', flexShrink: 0,
+          width: '28px', height: '28px', borderRadius: '50%', flexShrink: 0,
+          background: 'var(--tab-inactive-bg)', border: 'none', cursor: 'pointer',
+          color: 'var(--navy)', fontSize: '18px', fontWeight: 700,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
         }}
-      >
-        + Liste
-      </button>
+      >+</button>
     </div>
   )
 }
