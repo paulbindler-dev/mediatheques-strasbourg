@@ -119,19 +119,22 @@ export async function GET(req: NextRequest) {
   const docbase = req.nextUrl.searchParams.get('docbase') ?? 'IGUANA_2'
 
   try {
-    // Attempt 1: warm anonymous session (most reliable)
-    const warmCookies = await getWarmCookies(rscId)
-    const json1 = await fetchGetHoldings(warmCookies, rscId, docbase)
-    const result1 = json1 ? parseHoldingsResult(json1) : null
-    if (result1) return NextResponse.json(result1 satisfies HoldingResult, { headers: { 'Cache-Control': 'no-store' } })
+    // Start warm-up in background immediately (used as fallback if patron fails)
+    const warmPromise = getWarmCookies(rscId)
 
-    // Attempt 2: patron session (if user is logged in with library card)
+    // Attempt 1: patron session — fast path (1 DB read + 1 GetHoldings), no HTTP warm-up needed
     const patronCookies = await getIguanaCookies()
     if (patronCookies) {
-      const json2 = await fetchGetHoldings(buildCookieHeader(patronCookies), rscId, docbase)
-      const result2 = json2 ? parseHoldingsResult(json2) : null
-      if (result2) return NextResponse.json(result2 satisfies HoldingResult, { headers: { 'Cache-Control': 'no-store' } })
+      const json1 = await fetchGetHoldings(buildCookieHeader(patronCookies), rscId, docbase)
+      const result1 = json1 ? parseHoldingsResult(json1) : null
+      if (result1) return NextResponse.json(result1 satisfies HoldingResult, { headers: { 'Cache-Control': 'no-store' } })
     }
+
+    // Attempt 2: warm anonymous session (fallback — warm-up was already running in parallel)
+    const warmCookies = await warmPromise
+    const json2 = await fetchGetHoldings(warmCookies, rscId, docbase)
+    const result2 = json2 ? parseHoldingsResult(json2) : null
+    if (result2) return NextResponse.json(result2 satisfies HoldingResult, { headers: { 'Cache-Control': 'no-store' } })
 
     return NextResponse.json({ error: 'availability unavailable', available: null }, { status: 200 })
   } catch (e) {
