@@ -127,6 +127,8 @@ export default function NavBottom() {
                 const dir = i > activeIdx ? 'right' : 'left'
                 navigateWithTransition(router, href, dir)
               }}
+              aria-label={label}
+              aria-current={active ? 'page' : undefined}
               style={{
                 display: 'flex', flexDirection: 'column', alignItems: 'center',
                 gap: '2px', flex: 1, padding: '4px 0',
