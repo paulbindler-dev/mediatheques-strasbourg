@@ -137,9 +137,11 @@ function SortableListRow({
       </button>
       <button
         onClick={onDelete}
-        style={{ width: '28px', height: '28px', borderRadius: '6px', background: 'var(--error-bg)', border: 'none', cursor: 'pointer', color: 'var(--red)', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'var(--error-bg)', border: 'none', cursor: 'pointer', color: 'var(--red)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
         title="Supprimer"
-      >×</button>
+      >
+        <Trash2 size={14} strokeWidth={2} />
+      </button>
     </div>
   )
 }
@@ -160,14 +162,26 @@ export default function EnviesPage() {
   const [newListIcon, setNewListIcon] = useState('⭐')
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
   const [showManageModal, setShowManageModal] = useState(false)
-  const [viewMode, setViewMode] = useState<ViewMode>('dots')
+  const [showManageHelp, setShowManageHelp] = useState(false)
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    try {
+      const saved = localStorage.getItem('listes_view_mode')
+      if (saved === 'grid2' || saved === 'icons' || saved === 'images') return 'dots'
+      if (['dots', 'list', 'grid3'].includes(saved ?? '')) return saved as ViewMode
+    } catch {}
+    return 'dots'
+  })
   const [watchedRscIds, setWatchedRscIds] = useState<Set<string>>(new Set())
+  const [showTutorial, setShowTutorial] = useState(false)
   const dndSensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } }),
   )
   const cloudSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const cloudDirty = useRef(false)
+  const [undoItem, setUndoItem] = useState<WishlistItem | null>(null)
+  const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [checkProgress, setCheckProgress] = useState<{ done: number; total: number } | null>(null)
 
   // Pull-to-refresh
   const contentRef = useRef<HTMLDivElement>(null)
@@ -177,13 +191,8 @@ export default function EnviesPage() {
   const [pullProgress, setPullProgress] = useState(0)
   const checkAllRef = useRef<() => void>(() => {})
 
-  const VIEW_CYCLE: ViewMode[] = ['dots', 'list', 'grid2', 'grid3']
+  const VIEW_CYCLE: ViewMode[] = ['dots', 'list', 'grid3']
 
-  useEffect(() => {
-    const saved = localStorage.getItem('listes_view_mode')
-    if (saved === 'icons' || saved === 'images') setViewMode('list')
-    else if (['dots', 'list', 'grid2', 'grid3'].includes(saved ?? '')) setViewMode(saved as ViewMode)
-  }, [])
 
   useEffect(() => {
     localStorage.setItem('listes_view_mode', viewMode)
@@ -198,6 +207,21 @@ export default function EnviesPage() {
       .catch(() => {})
   }, [])
 
+  useEffect(() => {
+    try {
+      const count = parseInt(localStorage.getItem('tutorial_envies_shown') ?? '0', 10)
+      if (count < 3) {
+        setShowTutorial(true)
+        localStorage.setItem('tutorial_envies_shown', String(count + 1))
+      }
+    } catch {}
+  }, [])
+
+  function dismissTutorial() {
+    setShowTutorial(false)
+    try { localStorage.setItem('tutorial_envies_shown', '99') } catch {}
+  }
+
   async function toggleWatch(rscId: string, title: string) {
     const isWatching = watchedRscIds.has(rscId)
     if (isWatching) {
@@ -210,7 +234,11 @@ export default function EnviesPage() {
   }
 
   useEffect(() => {
-    const local = migrateOldData(loadStore())
+    const raw = migrateOldData(loadStore())
+    const local = raw.items.some(i => i.status === 'checking')
+      ? { ...raw, items: raw.items.map(i => i.status === 'checking' ? { ...i, status: 'idle' as const } : i) }
+      : raw
+    if (local !== raw) saveStore(local)
     setStore(local)
     loadFromCloud().then(cloud => {
       if (!cloud) {
@@ -250,6 +278,20 @@ export default function EnviesPage() {
     })
   }
 
+  function handleRemoveItem(item: WishlistItem) {
+    mutate(s => removeItem(s, item.id))
+    setUndoItem(item)
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current)
+    undoTimerRef.current = setTimeout(() => setUndoItem(null), 3500)
+  }
+
+  function handleUndoRemove() {
+    if (!undoItem) return
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current)
+    mutate(s => ({ ...s, items: [undoItem, ...s.items.filter(i => i.id !== undoItem.id)] }))
+    setUndoItem(null)
+  }
+
   function setLibrary(lib: LibraryKey) {
     mutate(s => ({ ...s, defaultLibrary: lib }))
   }
@@ -273,7 +315,7 @@ export default function EnviesPage() {
     const list = store.lists.find(l => l.id === item.listId)
     const queryString = [item.title, list?.queryExtra].filter(Boolean).join(' ')
 
-    function fetchWithTimeout(url: string, ms = 12000): Promise<Response> {
+    function fetchWithTimeout(url: string, ms = 8000): Promise<Response> {
       const ctrl = new AbortController()
       const t = setTimeout(() => ctrl.abort(), ms)
       return fetch(url, { signal: ctrl.signal }).finally(() => clearTimeout(t))
@@ -347,11 +389,18 @@ export default function EnviesPage() {
     if (globalChecking) return
     setGlobalChecking(true)
     const toCheck = allItems.filter(i => i.status !== 'checking')
+    setCheckProgress({ done: 0, total: toCheck.length })
     const BATCH = 6
+    let done = 0
     for (let i = 0; i < toCheck.length; i += BATCH) {
-      await Promise.all(toCheck.slice(i, i + BATCH).map(item => checkItem(item, store.defaultLibrary)))
+      await Promise.all(toCheck.slice(i, i + BATCH).map(async item => {
+        await checkItem(item, store.defaultLibrary)
+        done++
+        setCheckProgress({ done, total: toCheck.length })
+      }))
     }
     setGlobalChecking(false)
+    setCheckProgress(null)
   }
 
   function handleAddFromSearch() {
@@ -589,10 +638,38 @@ export default function EnviesPage() {
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             height: `${pullProgress * 44}px`, overflow: 'hidden',
-            color: 'var(--text-2)', fontSize: '11px', fontFamily: 'DM Mono, monospace',
+            color: 'var(--text-2)', fontSize: '11px',
             transition: 'none',
           }}>
             {pullProgress >= 1 ? '↑ Relâcher pour vérifier' : '↓ Tirer pour vérifier'}
+          </div>
+        )}
+
+        {showTutorial && (
+          <div style={{
+            margin: '10px 0 2px',
+            background: 'var(--surface)',
+            borderRadius: '10px',
+            padding: '11px 14px',
+            border: '1px solid var(--border)',
+            display: 'flex', alignItems: 'flex-start', gap: '10px',
+            animation: 'fade-in 0.2s ease-out',
+          }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-heading)', marginBottom: '5px' }}>
+                Astuces — Mes listes
+              </div>
+              <div style={{ fontSize: '11px', color: 'var(--text-2)', lineHeight: 1.7 }}>
+                ← Glisse un item pour le supprimer<br />
+                ↓ Tire vers le bas pour tout vérifier<br />
+                Ouvre <strong>≡ Gérer</strong> pour changer la vue
+              </div>
+            </div>
+            <button
+              onClick={dismissTutorial}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-2)', padding: '2px', flexShrink: 0, fontSize: '18px', lineHeight: 1 }}
+              aria-label="Fermer le guide"
+            >×</button>
           </div>
         )}
 
@@ -660,9 +737,22 @@ export default function EnviesPage() {
                     fontFamily: 'DM Sans, sans-serif',
                   }}
                 >
-                  {globalChecking ? 'Vérification…' : '↻ Tout vérifier'}
+                  {globalChecking && checkProgress
+                    ? `${checkProgress.done}/${checkProgress.total}`
+                    : globalChecking ? 'Vérification…' : '↻ Tout vérifier'}
                 </button>
               </div>
+              {globalChecking && checkProgress && (
+                <div style={{ height: '2px', background: 'var(--border)', borderRadius: '1px', marginBottom: '4px', overflow: 'hidden' }}>
+                  <div style={{
+                    height: '100%',
+                    width: `${(checkProgress.done / checkProgress.total) * 100}%`,
+                    background: 'var(--navy)',
+                    borderRadius: '1px',
+                    transition: 'width 0.3s ease',
+                  }} />
+                </div>
+              )}
               {(() => {
                 const lastCheckedAt = allItems.reduce((max, i) => Math.max(max, i.checkedAt ?? 0), 0) || null
                 return lastCheckedAt ? (
@@ -682,7 +772,7 @@ export default function EnviesPage() {
                       <Section label="Disponible" count={available.length} accent="var(--green)" viewMode={viewMode}>
                         {available.map(item => (
                           <ItemCard key={item.id} item={item} listDocType={currentList?.docType ?? ''}
-                            onRemove={id => mutate(s => removeItem(s, id))} viewMode={viewMode}
+                            onRemove={() => handleRemoveItem(item)} viewMode={viewMode}
             isWatched={watchedRscIds.has(item.match?.rscId ?? '')}
             onToggleWatch={item.match?.rscId ? () => toggleWatch(item.match!.rscId, item.title) : undefined} />
                         ))}
@@ -692,7 +782,7 @@ export default function EnviesPage() {
                       <Section label="Emprunté" count={loaned.length} accent="var(--orange)" viewMode={viewMode}>
                         {loaned.map(item => (
                           <ItemCard key={item.id} item={item} listDocType={currentList?.docType ?? ''}
-                            onRemove={id => mutate(s => removeItem(s, id))} viewMode={viewMode}
+                            onRemove={() => handleRemoveItem(item)} viewMode={viewMode}
             isWatched={watchedRscIds.has(item.match?.rscId ?? '')}
             onToggleWatch={item.match?.rscId ? () => toggleWatch(item.match!.rscId, item.title) : undefined} />
                         ))}
@@ -702,7 +792,7 @@ export default function EnviesPage() {
                       <Section label="Au catalogue" count={unknown.length} accent="var(--text-2)" viewMode={viewMode}>
                         {unknown.map(item => (
                           <ItemCard key={item.id} item={item} listDocType={currentList?.docType ?? ''}
-                            onRemove={id => mutate(s => removeItem(s, id))} viewMode={viewMode}
+                            onRemove={() => handleRemoveItem(item)} viewMode={viewMode}
             isWatched={watchedRscIds.has(item.match?.rscId ?? '')}
             onToggleWatch={item.match?.rscId ? () => toggleWatch(item.match!.rscId, item.title) : undefined} />
                         ))}
@@ -716,7 +806,7 @@ export default function EnviesPage() {
                 <Section label="Pas trouvé" count={notFound.length} accent="var(--text-2)" viewMode={viewMode}>
                   {notFound.map(item => (
                     <ItemCard key={item.id} item={item} listDocType={currentList?.docType ?? ''}
-                      onRemove={id => mutate(s => removeItem(s, id))} viewMode={viewMode}
+                      onRemove={() => handleRemoveItem(item)} viewMode={viewMode}
             isWatched={watchedRscIds.has(item.match?.rscId ?? '')}
             onToggleWatch={item.match?.rscId ? () => toggleWatch(item.match!.rscId, item.title) : undefined} />
                   ))}
@@ -727,7 +817,9 @@ export default function EnviesPage() {
                 <Section label="En attente" count={pending.length} accent="var(--text-2)" viewMode={viewMode}>
                   {pending.map(item => (
                     <ItemCard key={item.id} item={item} listDocType={currentList?.docType ?? ''}
-                      onRemove={id => mutate(s => removeItem(s, id))} viewMode={viewMode}
+                      onRemove={() => handleRemoveItem(item)}
+                      onRetry={item.status === 'error' ? () => checkItem(item, store.defaultLibrary) : undefined}
+                      viewMode={viewMode}
             isWatched={watchedRscIds.has(item.match?.rscId ?? '')}
             onToggleWatch={item.match?.rscId ? () => toggleWatch(item.match!.rscId, item.title) : undefined} />
                   ))}
@@ -737,6 +829,33 @@ export default function EnviesPage() {
           )}
         </div>
       </div>
+
+      {/* Undo delete toast */}
+      {undoItem && (
+        <div style={{
+          position: 'fixed', bottom: 'calc(var(--nav-h) + 12px)', left: '16px', right: '16px',
+          background: 'var(--navy)', color: 'white',
+          borderRadius: '12px', padding: '12px 16px',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          zIndex: 300, boxShadow: '0 4px 20px rgba(0,0,0,0.25)',
+          animation: 'fade-in 0.18s ease-out',
+        }}>
+          <span style={{ fontSize: '13px', fontWeight: 600 }}>
+            « {undoItem.title} » supprimé
+          </span>
+          <button
+            onClick={handleUndoRemove}
+            style={{
+              background: 'rgba(255,255,255,0.15)', border: 'none', color: 'white',
+              borderRadius: '8px', padding: '5px 12px',
+              fontSize: '12px', fontWeight: 700, cursor: 'pointer',
+              fontFamily: 'DM Sans, sans-serif',
+            }}
+          >
+            Annuler
+          </button>
+        </div>
+      )}
 
       {/* Manage lists modal */}
       {showManageModal && (
@@ -760,7 +879,7 @@ export default function EnviesPage() {
               <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-2)' }}>Vue des items</span>
               <ViewModeToggle value={viewMode} onChange={setViewMode} />
             </div>
-            <div style={{ overflowY: 'auto', padding: '0 12px 24px' }}>
+            <div style={{ overflowY: 'auto', padding: '0 12px 8px', flex: 1 }}>
               <DndContext
                 sensors={dndSensors}
                 collisionDetection={closestCenter}
@@ -780,6 +899,45 @@ export default function EnviesPage() {
                   ))}
                 </SortableContext>
               </DndContext>
+
+              {/* Aide — collapsible */}
+              <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '0.5px solid var(--border)' }}>
+                <button
+                  onClick={() => setShowManageHelp(v => !v)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-2)', fontFamily: 'DM Sans, sans-serif' }}
+                >
+                  <span style={{ fontSize: '11px', fontWeight: 600 }}>Aide</span>
+                  <span style={{ fontSize: '10px', transition: 'transform 0.2s', display: 'inline-block', transform: showManageHelp ? 'rotate(90deg)' : 'rotate(0deg)' }}>›</span>
+                </button>
+                {showManageHelp && (
+                  <div style={{ marginTop: '10px' }}>
+                    {[
+                      { title: 'Listes', body: 'Glisse pour réorganiser. L\'œil masque sans supprimer. La corbeille supprime définitivement avec tous les titres.' },
+                      { title: 'Vérifier la dispo', body: 'Tire vers le bas sur n\'importe quelle liste pour relancer la vérification de disponibilité.' },
+                      { title: 'Ajouter des titres', body: 'Cherche dans le champ en haut, ou depuis le Catalogue via le bouton +.' },
+                      { title: 'Vue', body: 'Le sélecteur de vue change l\'affichage des titres (liste, points, grille).' },
+                    ].map(({ title, body }) => (
+                      <div key={title} style={{ marginBottom: '10px' }}>
+                        <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-heading)', marginBottom: '2px' }}>{title}</div>
+                        <div style={{ fontSize: '11px', color: 'var(--text-2)', lineHeight: 1.5 }}>{body}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+            <div style={{ padding: '12px 20px calc(var(--nav-h) + 12px)', borderTop: '0.5px solid var(--border)' }}>
+              <button
+                onClick={() => { setShowManageModal(false); setShowNewListModal(true) }}
+                style={{
+                  width: '100%', padding: '11px', background: 'transparent',
+                  border: '1.5px dashed var(--border)', borderRadius: 'var(--radius-sm)',
+                  fontSize: '13px', fontWeight: 600, color: 'var(--text-2)',
+                  cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
+                }}
+              >
+                + Créer une liste
+              </button>
             </div>
           </div>
         </div>
@@ -797,7 +955,7 @@ export default function EnviesPage() {
           }} onClick={() => setDeleteConfirmId(null)}>
             <div
               className="sheet-enter"
-              style={{ background: 'var(--surface)', width: '100%', padding: '24px', borderRadius: '16px 16px 0 0' }}
+              style={{ background: 'var(--surface)', width: '100%', padding: '24px 24px calc(24px + var(--nav-h))', borderRadius: '16px 16px 0 0' }}
               onClick={e => e.stopPropagation()}
             >
               <div style={{ fontSize: '20px', marginBottom: '8px', textAlign: 'center' }}>{list.icon}</div>
@@ -847,7 +1005,7 @@ export default function EnviesPage() {
         }} onClick={() => setShowNewListModal(false)}>
           <div
             className="sheet-enter"
-            style={{ background: 'var(--surface)', width: '100%', padding: '24px', borderRadius: '16px 16px 0 0' }}
+            style={{ background: 'var(--surface)', width: '100%', padding: '24px 24px calc(24px + var(--nav-h))', borderRadius: '16px 16px 0 0' }}
             onClick={e => e.stopPropagation()}
           >
             <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-heading)', marginBottom: '16px' }}>
@@ -917,7 +1075,7 @@ function formatCheckedAt(ts: number | null): string | null {
 function Section({ label, count, accent, viewMode, children }: {
   label: string; count: number; accent: string; viewMode: ViewMode; children: React.ReactNode
 }) {
-  const isGrid = viewMode === 'grid2' || viewMode === 'grid3'
+  const isGrid = viewMode === 'grid3'
   return (
     <div style={{ marginBottom: '16px' }}>
       <div style={{
@@ -927,11 +1085,7 @@ function Section({ label, count, accent, viewMode, children }: {
         {label} <span style={{ color: accent }}>· {count}</span>
       </div>
       {isGrid ? (
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: viewMode === 'grid3' ? '1fr 1fr 1fr' : '1fr 1fr',
-          gap: viewMode === 'grid3' ? '8px' : '10px',
-        }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
           {children}
         </div>
       ) : (
@@ -959,13 +1113,15 @@ function ItemCard({
   item,
   listDocType,
   onRemove,
+  onRetry,
   viewMode,
   isWatched,
   onToggleWatch,
 }: {
   item: WishlistItem
   listDocType: string
-  onRemove: (id: string) => void
+  onRemove: () => void
+  onRetry?: () => void
   viewMode: ViewMode
   isWatched?: boolean
   onToggleWatch?: () => void
@@ -1006,7 +1162,7 @@ function ItemCard({
   if (isChecking) {
     subtitleNode = <span style={{ fontFamily: 'DM Mono, monospace' }}>Vérification…</span>
   } else if (isError) {
-    subtitleNode = <span style={{ color: 'var(--red)' }}>Erreur</span>
+    subtitleNode = <span style={{ color: 'var(--red)' }}>Erreur réseau</span>
   } else if (isFound && item.match) {
     subtitleNode = (
       <>
@@ -1029,10 +1185,10 @@ function ItemCard({
 
   function handleDelete() {
     navigator.vibrate?.(8)
-    onRemove(item.id)
+    onRemove()
   }
 
-  if (viewMode === 'grid2' || viewMode === 'grid3') {
+  if (viewMode === 'grid3') {
     return (
       <div
         onClick={() => url && window.open(url, '_blank', 'noopener,noreferrer')}
@@ -1048,14 +1204,14 @@ function ItemCard({
             />
           ) : (
             <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <span style={{ fontSize: viewMode === 'grid3' ? '24px' : '32px' }}>{typeIcon}</span>
+              <span style={{ fontSize: '24px' }}>{typeIcon}</span>
             </div>
           )}
           <div style={{ position: 'absolute', top: '5px', left: '5px', width: '7px', height: '7px', borderRadius: '50%', background: dotColor }} />
         </div>
         <div style={{ padding: '5px 2px 0' }}>
           <div style={{
-            fontSize: viewMode === 'grid3' ? '10.5px' : '12px', fontWeight: 600,
+            fontSize: '10.5px', fontWeight: 600,
             color: 'var(--color-heading)', lineHeight: 1.3,
             overflow: 'hidden', display: '-webkit-box',
             WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const,
@@ -1181,9 +1337,23 @@ function ItemCard({
           )}
         </div>
 
+        {isError && onRetry && (
+          <button
+            onClick={e => { e.stopPropagation(); onRetry() }}
+            style={{
+              fontSize: '10px', fontWeight: 700, color: 'var(--red)',
+              background: 'var(--error-bg)', border: 'none',
+              borderRadius: '6px', padding: '3px 8px',
+              cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', flexShrink: 0,
+            }}
+          >
+            Réessayer
+          </button>
+        )}
         {onToggleWatch && (
           <button
             onClick={e => { e.stopPropagation(); onToggleWatch() }}
+            aria-label={isWatched ? 'Désactiver la notification' : 'Notifier quand disponible'}
             style={{
               width: '28px', height: '28px', borderRadius: '50%', flexShrink: 0,
               background: isWatched ? 'var(--orange)' : 'var(--tab-inactive-bg)',

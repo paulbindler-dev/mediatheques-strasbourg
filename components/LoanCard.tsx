@@ -30,7 +30,7 @@ export default function LoanCard({ l }: { l: IguanaLoan }) {
   const typeLabel = typeBadge(l.TypeOfDocument ?? '', '')
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 14px' }}>
+    <div className="card-tap" style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 14px' }}>
       <div style={{ width: '7px', height: '7px', borderRadius: '50%', flexShrink: 0, background: dotColor }} />
       <img
         src={thumb}
@@ -50,7 +50,7 @@ export default function LoanCard({ l }: { l: IguanaLoan }) {
           )}
         </div>
         <div style={{ marginTop: '6px' }}>
-          <StatusBadge variant={variant} label={label} />
+          <StatusBadge variant={variant} label={label} pulse={variant === 'red'} />
         </div>
       </div>
     </div>

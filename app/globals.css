@@ -132,6 +132,116 @@ textarea:focus {
   50% { opacity: 0.35; }
 }
 
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+
+@keyframes ring-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5); }
+  70%  { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+@keyframes green-shimmer {
+  0%   { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.5); }
+  70%  { box-shadow: 0 0 0 6px rgba(34, 197, 94, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+}
+
+@keyframes counter-bounce {
+  0%   { transform: scale(0); opacity: 0; }
+  55%  { transform: scale(1.35); opacity: 1; }
+  75%  { transform: scale(0.88); }
+  90%  { transform: scale(1.08); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.card-tap {
+  transition: transform 0.14s ease-out, opacity 0.1s ease-out, box-shadow 0.14s ease-out;
+  -webkit-tap-highlight-color: transparent;
+}
+.card-tap:active {
+  transform: scale(0.975);
+  opacity: 0.92;
+  box-shadow: 0 3px 14px rgba(0, 0, 0, 0.13);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  @keyframes ring-pulse { 0%, 100% { box-shadow: none; } }
+  @keyframes green-shimmer { 0%, 100% { box-shadow: none; } }
+  @keyframes counter-bounce { 0%, 100% { transform: scale(1); opacity: 1; } }
+  .card-tap:active { transform: none; }
+}
+
+/* View Transitions — navigation entre onglets */
+@keyframes vt-fade-slide-in {
+  from { opacity: 0; transform: translateX(14px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes vt-fade-slide-out {
+  from { opacity: 1; transform: translateX(0); }
+  to   { opacity: 0; transform: translateX(-14px); }
+}
+@keyframes vt-fade-slide-in-reverse {
+  from { opacity: 0; transform: translateX(-14px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes vt-fade-slide-out-reverse {
+  from { opacity: 1; transform: translateX(0); }
+  to   { opacity: 0; transform: translateX(14px); }
+}
+
+::view-transition-old(page-content) {
+  animation: 0.2s cubic-bezier(0, 0, 0.2, 1) both vt-fade-slide-out;
+}
+::view-transition-new(page-content) {
+  animation: 0.22s cubic-bezier(0, 0, 0.2, 1) both vt-fade-slide-in;
+}
+
+:root[data-nav-dir="left"] ::view-transition-old(page-content) {
+  animation-name: vt-fade-slide-out-reverse;
+}
+:root[data-nav-dir="left"] ::view-transition-new(page-content) {
+  animation-name: vt-fade-slide-in-reverse;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(page-content),
+  ::view-transition-new(page-content) { animation: none; }
+}
+
+@keyframes stagger-fade-in {
+  from { opacity: 0; transform: translateY(7px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@property --glow-r {
+  syntax: '<number>';
+  inherits: false;
+  initial-value: 0;
+}
+
+@keyframes badge-glow-pulse {
+  0%, 100% { --glow-r: 0; }
+  50%       { --glow-r: 5; }
+}
+
+.badge-dispo-pulse {
+  animation: badge-glow-pulse 2.4s ease-in-out infinite;
+  box-shadow: 0 0 0 calc(var(--glow-r) * 1px) rgba(34, 197, 94, 0.35);
+}
+
+@keyframes dot-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.15; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .badge-dispo-pulse { animation: none; box-shadow: none; }
+  @keyframes dot-blink { 0%, 100% { opacity: 1; } }
+}
+
 @keyframes sheet-up {
   from { transform: translateY(100%); }
   to   { transform: translateY(0); }

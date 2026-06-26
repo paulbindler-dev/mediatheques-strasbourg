@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { getSupabaseBrowser } from '@/lib/supabase-browser'
 import { useRouter } from 'next/navigation'
 
-type Mode = 'login' | 'signup'
+type Mode = 'login' | 'signup' | 'forgot'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -14,10 +14,22 @@ export default function LoginPage() {
   const router = useRouter()
   const sb = getSupabaseBrowser()
 
+  const [resetSent, setResetSent] = useState(false)
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
     setError(null)
+
+    if (mode === 'forgot') {
+      const { error } = await sb.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin + '/reset-password',
+      })
+      setLoading(false)
+      if (error) { setError(error.message); return }
+      setResetSent(true)
+      return
+    }
 
     const { error } = mode === 'login'
       ? await sb.auth.signInWithPassword({ email, password })
@@ -35,35 +47,51 @@ export default function LoginPage() {
           Médiathèques · Strasbourg
         </div>
         <h1 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--color-heading)', marginBottom: '24px', letterSpacing: '-0.4px' }}>
-          {mode === 'login' ? 'Connexion' : 'Créer un compte'}
+          {mode === 'login' ? 'Connexion' : mode === 'signup' ? 'Créer un compte' : 'Mot de passe oublié'}
         </h1>
 
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <input
-            type="email" value={email} onChange={e => setEmail(e.target.value)}
-            placeholder="Email" required autoComplete="email"
-            style={{ padding: '12px 14px', borderRadius: 'var(--radius-sm)', border: '1.5px solid var(--border)', fontSize: '14px', fontFamily: 'DM Sans, sans-serif', outline: 'none', background: 'var(--bg)' }}
-          />
-          <input
-            type="password" value={password} onChange={e => setPassword(e.target.value)}
-            placeholder="Mot de passe" required autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-            style={{ padding: '12px 14px', borderRadius: 'var(--radius-sm)', border: '1.5px solid var(--border)', fontSize: '14px', fontFamily: 'DM Sans, sans-serif', outline: 'none', background: 'var(--bg)' }}
-          />
-          {error && (
-            <div style={{ fontSize: '13px', color: 'var(--red)', padding: '8px 12px', background: 'var(--error-bg)', borderRadius: 'var(--radius-sm)' }}>
-              {error}
-            </div>
-          )}
-          <button type="submit" disabled={loading}
-            style={{ padding: '13px', background: 'var(--navy)', color: 'white', border: 'none', borderRadius: 'var(--radius-sm)', fontSize: '14px', fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1, fontFamily: 'DM Sans, sans-serif', marginTop: '4px' }}>
-            {loading ? '…' : mode === 'login' ? 'Se connecter' : 'Créer mon compte'}
-          </button>
-        </form>
+        {resetSent ? (
+          <div style={{ fontSize: '14px', color: 'var(--text)', lineHeight: 1.5, padding: '12px', background: 'var(--success-bg)', borderRadius: 'var(--radius-sm)' }}>
+            Un email de réinitialisation a été envoyé à <strong>{email}</strong>. Vérifie ta boîte mail.
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <input
+              type="email" value={email} onChange={e => setEmail(e.target.value)}
+              placeholder="Email" required autoComplete="email"
+              style={{ padding: '12px 14px', borderRadius: 'var(--radius-sm)', border: '1.5px solid var(--border)', fontSize: '14px', fontFamily: 'DM Sans, sans-serif', outline: 'none', background: 'var(--bg)' }}
+            />
+            {mode !== 'forgot' && (
+              <input
+                type="password" value={password} onChange={e => setPassword(e.target.value)}
+                placeholder="Mot de passe" required autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+                style={{ padding: '12px 14px', borderRadius: 'var(--radius-sm)', border: '1.5px solid var(--border)', fontSize: '14px', fontFamily: 'DM Sans, sans-serif', outline: 'none', background: 'var(--bg)' }}
+              />
+            )}
+            {error && (
+              <div style={{ fontSize: '13px', color: 'var(--red)', padding: '8px 12px', background: 'var(--error-bg)', borderRadius: 'var(--radius-sm)' }}>
+                {error}
+              </div>
+            )}
+            <button type="submit" disabled={loading}
+              style={{ padding: '13px', background: 'var(--navy)', color: 'white', border: 'none', borderRadius: 'var(--radius-sm)', fontSize: '14px', fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1, fontFamily: 'DM Sans, sans-serif', marginTop: '4px' }}>
+              {loading ? '…' : mode === 'login' ? 'Se connecter' : mode === 'signup' ? 'Créer mon compte' : 'Envoyer le lien'}
+            </button>
+          </form>
+        )}
 
-        <button onClick={() => { setMode(m => m === 'login' ? 'signup' : 'login'); setError(null) }}
-          style={{ marginTop: '16px', background: 'none', border: 'none', color: 'var(--text-2)', fontSize: '13px', cursor: 'pointer', width: '100%', fontFamily: 'DM Sans, sans-serif' }}>
-          {mode === 'login' ? 'Pas encore de compte ? Créer un compte' : 'Déjà un compte ? Se connecter'}
-        </button>
+        <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          {mode === 'login' && (
+            <button onClick={() => { setMode('forgot'); setError(null); setResetSent(false) }}
+              style={{ background: 'none', border: 'none', color: 'var(--text-2)', fontSize: '13px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', textAlign: 'center' }}>
+              Mot de passe oublié ?
+            </button>
+          )}
+          <button onClick={() => { setMode(m => m === 'signup' ? 'login' : m === 'forgot' ? 'login' : 'signup'); setError(null); setResetSent(false) }}
+            style={{ background: 'none', border: 'none', color: 'var(--text-2)', fontSize: '13px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', textAlign: 'center' }}>
+            {mode === 'login' ? 'Pas encore de compte ? Créer un compte' : 'Déjà un compte ? Se connecter'}
+          </button>
+        </div>
       </div>
     </div>
   )
