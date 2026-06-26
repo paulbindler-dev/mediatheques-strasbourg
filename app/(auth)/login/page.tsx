@@ -5,6 +5,19 @@ import { useRouter } from 'next/navigation'
 
 type Mode = 'login' | 'signup' | 'forgot'
 
+function translateError(msg: string): string {
+  const m = msg.toLowerCase()
+  if (m.includes('invalid login credentials') || m.includes('invalid email or password')) return 'Identifiants incorrects. Vérifie ton email et ton mot de passe.'
+  if (m.includes('email not confirmed')) return 'Email non confirmé. Vérifie ta boîte mail.'
+  if (m.includes('user already registered') || m.includes('already been registered')) return 'Un compte existe déjà avec cet email.'
+  if (m.includes('password should be at least')) return 'Le mot de passe doit contenir au moins 6 caractères.'
+  if (m.includes('unable to validate email') || m.includes('invalid format')) return 'Adresse email invalide.'
+  if (m.includes('rate limit') || m.includes('too many requests')) return 'Trop de tentatives, réessaie dans quelques minutes.'
+  if (m.includes('for security purposes')) return 'Pour des raisons de sécurité, attends quelques secondes avant de réessayer.'
+  if (m.includes('network') || m.includes('fetch')) return 'Erreur réseau. Vérifie ta connexion.'
+  return msg
+}
+
 export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -35,7 +48,7 @@ export default function LoginPage() {
       ? await sb.auth.signInWithPassword({ email, password })
       : await sb.auth.signUp({ email, password })
 
-    if (error) { setError(error.message); setLoading(false); return }
+    if (error) { setError(translateError(error.message)); setLoading(false); return }
     router.push('/compte')
     router.refresh()
   }
@@ -46,7 +59,7 @@ export default function LoginPage() {
         <div style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-2)', marginBottom: '8px', letterSpacing: '-0.1px' }}>
           Médiathèques · Strasbourg
         </div>
-        <h1 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--color-heading)', marginBottom: '24px', letterSpacing: '-0.4px' }}>
+        <h1 style={{ fontSize: '28px', fontWeight: 900, color: 'var(--color-heading)', marginBottom: '24px', letterSpacing: '-1.5px', lineHeight: 1, fontFamily: 'DM Sans, sans-serif' }}>
           {mode === 'login' ? 'Connexion' : mode === 'signup' ? 'Créer un compte' : 'Mot de passe oublié'}
         </h1>
 

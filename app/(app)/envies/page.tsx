@@ -18,7 +18,7 @@ import {
   addCustomList, removeList, libraryLabel,
   loadFromCloud, saveToCloud, mergeStores,
   DEFAULT_LISTS,
-  type WishlistStore, type WishlistItem, type LibraryKey,
+  type WishlistStore, type WishlistItem, type WishlistDef, type LibraryKey,
 } from '@/lib/wishlists'
 
 function titleMatches(resultTitle: string, searchTitle: string): boolean {
@@ -181,6 +181,8 @@ export default function EnviesPage() {
   const cloudDirty = useRef(false)
   const [undoItem, setUndoItem] = useState<WishlistItem | null>(null)
   const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [undoList, setUndoList] = useState<{ list: WishlistDef; items: WishlistItem[] } | null>(null)
+  const undoListTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [checkProgress, setCheckProgress] = useState<{ done: number; total: number } | null>(null)
 
   // Pull-to-refresh
@@ -439,6 +441,8 @@ export default function EnviesPage() {
   }
 
   function handleDeleteList(id: string) {
+    const list = store.lists.find(l => l.id === id)
+    const items = store.items.filter(i => i.listId === id)
     mutate(s => removeList(s, id))
     if (activeList === id) {
       const remaining = store.lists.filter(l => l.id !== id)
@@ -446,6 +450,23 @@ export default function EnviesPage() {
       setSearchFilter('')
     }
     setDeleteConfirmId(null)
+    if (list) {
+      setUndoList({ list, items })
+      if (undoListTimerRef.current) clearTimeout(undoListTimerRef.current)
+      undoListTimerRef.current = setTimeout(() => setUndoList(null), 3500)
+    }
+  }
+
+  function handleUndoDeleteList() {
+    if (!undoList) return
+    if (undoListTimerRef.current) clearTimeout(undoListTimerRef.current)
+    mutate(s => ({
+      ...s,
+      lists: [...s.lists, undoList.list],
+      items: [...undoList.items, ...s.items],
+    }))
+    setActiveList(undoList.list.id)
+    setUndoList(null)
   }
 
   // Keep checkAllRef pointing to the latest checkAll (so DOM listeners always call it fresh)
@@ -508,12 +529,15 @@ export default function EnviesPage() {
         borderBottom: '0.5px solid var(--border)',
         flexShrink: 0,
       }}>
-        <div
+        <h1
+          role="button"
+          tabIndex={0}
           onClick={() => setViewMode(m => VIEW_CYCLE[(VIEW_CYCLE.indexOf(m) + 1) % VIEW_CYCLE.length])}
-          style={{ fontSize: '22px', fontWeight: 800, color: 'var(--color-heading)', letterSpacing: '-0.5px', fontFamily: 'DM Sans, sans-serif', cursor: 'pointer', userSelect: 'none' }}
+          onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') setViewMode(m => VIEW_CYCLE[(VIEW_CYCLE.indexOf(m) + 1) % VIEW_CYCLE.length]) }}
+          style={{ fontSize: '32px', fontWeight: 900, color: 'var(--color-heading)', letterSpacing: '-2px', lineHeight: 1, fontFamily: 'DM Sans, sans-serif', cursor: 'pointer', userSelect: 'none' }}
         >
           Mes listes
-        </div>
+        </h1>
         <select
           value={store.defaultLibrary}
           onChange={e => setLibrary(e.target.value as LibraryKey)}
@@ -746,10 +770,12 @@ export default function EnviesPage() {
                 <div style={{ height: '2px', background: 'var(--border)', borderRadius: '1px', marginBottom: '4px', overflow: 'hidden' }}>
                   <div style={{
                     height: '100%',
-                    width: `${(checkProgress.done / checkProgress.total) * 100}%`,
+                    width: '100%',
                     background: 'var(--navy)',
                     borderRadius: '1px',
-                    transition: 'width 0.3s ease',
+                    transformOrigin: 'left',
+                    transform: `scaleX(${checkProgress.done / checkProgress.total})`,
+                    transition: 'transform 0.3s ease',
                   }} />
                 </div>
               )}
@@ -845,6 +871,33 @@ export default function EnviesPage() {
           </span>
           <button
             onClick={handleUndoRemove}
+            style={{
+              background: 'rgba(255,255,255,0.15)', border: 'none', color: 'white',
+              borderRadius: '8px', padding: '5px 12px',
+              fontSize: '12px', fontWeight: 700, cursor: 'pointer',
+              fontFamily: 'DM Sans, sans-serif',
+            }}
+          >
+            Annuler
+          </button>
+        </div>
+      )}
+
+      {/* Undo delete list toast */}
+      {undoList && (
+        <div style={{
+          position: 'fixed', bottom: 'calc(var(--nav-h) + 12px)', left: '16px', right: '16px',
+          background: 'var(--navy)', color: 'white',
+          borderRadius: '12px', padding: '12px 16px',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          zIndex: 300, boxShadow: '0 4px 20px rgba(0,0,0,0.25)',
+          animation: 'fade-in 0.18s ease-out',
+        }}>
+          <span style={{ fontSize: '13px', fontWeight: 600 }}>
+            Liste « {undoList.list.name} » supprimée
+          </span>
+          <button
+            onClick={handleUndoDeleteList}
             style={{
               background: 'rgba(255,255,255,0.15)', border: 'none', color: 'white',
               borderRadius: '8px', padding: '5px 12px',

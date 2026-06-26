@@ -34,9 +34,20 @@ export default function ComptePage() {
   const [needsReconnect, setNeedsReconnect] = useState(false)
   const [userName, setUserName] = useState('Paul')
   const [loadingMsg, setLoadingMsg] = useState(LOADING_MSGS[0])
+  const [showTutorial, setShowTutorial] = useState(false)
   const loadedAtRef = useRef<number>(0)
   const loadStartRef = useRef<number>(Date.now())
   const router = useRouter()
+
+  useEffect(() => {
+    try {
+      const count = parseInt(localStorage.getItem('tutorial_compte_shown') ?? '0', 10)
+      if (count < 3) {
+        setShowTutorial(true)
+        localStorage.setItem('tutorial_compte_shown', String(count + 1))
+      }
+    } catch {}
+  }, [])
 
   useEffect(() => {
     if (!loading) return
@@ -123,11 +134,9 @@ export default function ComptePage() {
     <div>
       {/* Header */}
       <div style={{ background: 'var(--surface)', padding: '20px 18px 0', borderBottom: '1px solid var(--border)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ fontSize: '26px', fontWeight: 800, color: 'var(--color-heading)', letterSpacing: '-0.5px', fontFamily: 'DM Sans, sans-serif' }}>
-            Bonjour {userName}
-          </div>
-        </div>
+        <h1 style={{ fontSize: '36px', fontWeight: 900, color: 'var(--color-heading)', letterSpacing: '-2px', lineHeight: 1, fontFamily: 'DM Sans, sans-serif', textWrap: 'balance' } as React.CSSProperties}>
+          Bonjour {userName}
+        </h1>
         <div style={{ display: 'flex', gap: '6px', marginTop: '14px', paddingBottom: '14px' }}>
           {([
             ['reservations', loading ? 'Réservations' : `Réservations (${bookings.length})`],
@@ -152,6 +161,18 @@ export default function ComptePage() {
 
       {/* List */}
       <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '12px', background: 'var(--content-bg)', minHeight: '100%' }}>
+        {showTutorial && (
+          <div style={{ background: 'var(--surface)', borderRadius: '10px', padding: '11px 14px', border: '1px solid var(--border)', display: 'flex', alignItems: 'flex-start', gap: '10px', animation: 'fade-in 0.2s ease-out' }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-heading)', marginBottom: '5px' }}>Astuces — Navigation</div>
+              <div style={{ fontSize: '11px', color: 'var(--text-2)', lineHeight: 1.7 }}>
+                ← → Glisse pour passer entre Prêts, Catalogue et Listes<br />
+                Les points en haut de la nav indiquent ta position
+              </div>
+            </div>
+            <button onClick={() => { setShowTutorial(false); try { localStorage.setItem('tutorial_compte_shown', '99') } catch {} }} aria-label="Fermer le guide" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-2)', padding: '2px', flexShrink: 0, fontSize: '18px', lineHeight: 1 }}>×</button>
+          </div>
+        )}
         {apiError && (
           <div style={{ padding: '16px', background: 'var(--surface)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
             <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-heading)', marginBottom: '4px' }}>

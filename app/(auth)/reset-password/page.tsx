@@ -9,6 +9,7 @@ export default function ResetPasswordPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [ready, setReady] = useState(false)
+  const [success, setSuccess] = useState(false)
   const router = useRouter()
   const sb = getSupabaseBrowser()
 
@@ -27,7 +28,8 @@ export default function ResetPasswordPage() {
     const { error } = await sb.auth.updateUser({ password })
     setLoading(false)
     if (error) { setError(error.message); return }
-    router.push('/compte')
+    setSuccess(true)
+    setTimeout(() => router.push('/compte'), 2000)
   }
 
   return (
@@ -36,14 +38,26 @@ export default function ResetPasswordPage() {
         <div style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-2)', marginBottom: '8px' }}>
           Médiathèques · Strasbourg
         </div>
-        <h1 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--color-heading)', marginBottom: '24px', letterSpacing: '-0.4px' }}>
+        <h1 style={{ fontSize: '28px', fontWeight: 900, color: 'var(--color-heading)', marginBottom: '24px', letterSpacing: '-1.5px', lineHeight: 1, fontFamily: 'DM Sans, sans-serif' }}>
           Nouveau mot de passe
         </h1>
 
-        {!ready ? (
-          <p style={{ fontSize: '14px', color: 'var(--text-2)', lineHeight: 1.5 }}>
-            Lien invalide ou expiré. Retourne sur la page de connexion et refais une demande.
-          </p>
+        {success ? (
+          <div style={{ padding: '14px', background: 'var(--success-bg)', borderRadius: 'var(--radius-sm)', fontSize: '14px', color: 'var(--text)', lineHeight: 1.5 }}>
+            ✓ Mot de passe mis à jour ! Redirection en cours…
+          </div>
+        ) : !ready ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <p style={{ fontSize: '14px', color: 'var(--text-2)', lineHeight: 1.5 }}>
+              Lien invalide ou expiré. Retourne sur la page de connexion et refais une demande.
+            </p>
+            <button
+              onClick={() => router.push('/login')}
+              style={{ padding: '13px', background: 'var(--navy)', color: 'white', border: 'none', borderRadius: 'var(--radius-sm)', fontSize: '14px', fontWeight: 700, cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}
+            >
+              Retour à la connexion →
+            </button>
+          </div>
         ) : (
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <input

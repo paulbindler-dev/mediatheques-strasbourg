@@ -165,6 +165,7 @@ export default function CataloguePage() {
   const [showSaveModal, setShowSaveModal] = useState(false)
   const [newPresetName, setNewPresetName] = useState('')
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
+  const [showTutorial, setShowTutorial] = useState(false)
   const [showManagePresets, setShowManagePresets] = useState(false)
   const [showManageHelp, setShowManageHelp] = useState(false)
   const [showCreatePreset, setShowCreatePreset] = useState(false)
@@ -186,6 +187,7 @@ export default function CataloguePage() {
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } }),
   )
+  const scrollRef = useRef<HTMLDivElement>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const cloudSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const cloudLoaded = useRef(false)
@@ -235,6 +237,21 @@ export default function CataloguePage() {
   useEffect(() => {
     cataloguePrefsRef.current = { presetsState, customPresets, library }
   }, [presetsState, customPresets, library])
+
+  useEffect(() => {
+    try {
+      const count = parseInt(localStorage.getItem('tutorial_catalogue_shown') ?? '0', 10)
+      if (count < 3) {
+        setShowTutorial(true)
+        localStorage.setItem('tutorial_catalogue_shown', String(count + 1))
+      }
+    } catch {}
+  }, [])
+
+  useEffect(() => {
+    const saved = sessionStorage.getItem('catalogue_scroll')
+    if (saved && scrollRef.current) scrollRef.current.scrollTop = parseInt(saved, 10)
+  }, [])
 
   function scheduleCloudSave() {
     if (!cloudLoaded.current) return
@@ -409,12 +426,15 @@ export default function CataloguePage() {
         borderBottom: '0.5px solid var(--border)',
         flexShrink: 0,
       }}>
-        <div
+        <h1
+          role="button"
+          tabIndex={0}
           onClick={() => setViewMode(m => VIEW_CYCLE[(VIEW_CYCLE.indexOf(m) + 1) % VIEW_CYCLE.length])}
-          style={{ fontSize: '22px', fontWeight: 800, color: 'var(--color-heading)', letterSpacing: '-0.5px', fontFamily: 'DM Sans, sans-serif', cursor: 'pointer', userSelect: 'none' }}
+          onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') setViewMode(m => VIEW_CYCLE[(VIEW_CYCLE.indexOf(m) + 1) % VIEW_CYCLE.length]) }}
+          style={{ fontSize: '32px', fontWeight: 900, color: 'var(--color-heading)', letterSpacing: '-2px', lineHeight: 1, fontFamily: 'DM Sans, sans-serif', cursor: 'pointer', userSelect: 'none' }}
         >
           Catalogue
-        </div>
+        </h1>
         <select
           value={library}
           onChange={e => { setLibrary(e.target.value as LibraryKey); scheduleCloudSave() }}
@@ -451,19 +471,22 @@ export default function CataloguePage() {
             onClick={() => setShowManagePresets(true)}
             style={{
               fontSize: '10.5px', fontWeight: 600, flexShrink: 0,
-              padding: '5px 10px', borderRadius: '20px',
+              padding: '5px 12px', borderRadius: '20px',
               border: '1.5px solid var(--border)',
               background: 'transparent', color: 'var(--text-2)',
               cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
+              display: 'flex', alignItems: 'center', gap: '4px',
             }}
-            title="Gérer les filtres"
+            aria-label="Gérer les filtres"
           >
             <SlidersHorizontal size={13} strokeWidth={2} />
+            Gérer
           </button>
           {orderedPresets.filter(p => !p.hidden).map(p => (
             <button
               key={p.id}
               onClick={() => setPreset(p.id)}
+              aria-pressed={preset === p.id}
               style={{
                 fontSize: '10.5px', fontWeight: 600, flexShrink: 0,
                 padding: '5px 12px',
@@ -532,7 +555,24 @@ export default function CataloguePage() {
       </div>
 
       {/* Scrollable content */}
-      <div style={{ flex: 1, overflowY: 'auto', minHeight: 0, padding: '14px 16px' }}>
+      <div
+        ref={scrollRef}
+        onScroll={() => { try { sessionStorage.setItem('catalogue_scroll', String(scrollRef.current?.scrollTop ?? 0)) } catch {} }}
+        style={{ flex: 1, overflowY: 'auto', minHeight: 0, padding: '14px 16px' }}
+      >
+        {showTutorial && (
+          <div style={{ background: 'var(--surface)', borderRadius: '10px', padding: '11px 14px', border: '1px solid var(--border)', display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '4px', animation: 'fade-in 0.2s ease-out' }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-heading)', marginBottom: '5px' }}>Astuces — Catalogue</div>
+              <div style={{ fontSize: '11px', color: 'var(--text-2)', lineHeight: 1.7 }}>
+                Tape sur <strong>Catalogue</strong> pour changer la vue (•• / liste / grille)<br />
+                ← → Glisse pour naviguer entre les sections
+              </div>
+            </div>
+            <button onClick={() => { setShowTutorial(false); try { localStorage.setItem('tutorial_catalogue_shown', '99') } catch {} }} aria-label="Fermer le guide" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-2)', padding: '2px', flexShrink: 0, fontSize: '18px', lineHeight: 1 }}>×</button>
+          </div>
+        )}
+
         {error && (
           <div style={{ fontSize: '12px', color: 'var(--text-2)', padding: '12px', background: 'var(--surface)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', fontFamily: 'DM Mono, monospace', marginBottom: '10px' }}>
             {error}
@@ -566,11 +606,14 @@ export default function CataloguePage() {
             <div style={{ fontSize: '10px', color: 'var(--text-2)', fontFamily: 'DM Mono, monospace', marginBottom: '10px' }}>
               {total} résultat{total > 1 ? 's' : ''} · {libraryLabel(library)}
             </div>
-            <div style={
-              viewMode === 'grid3'
-                ? { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', alignItems: 'start' }
-                : { display: 'flex', flexDirection: 'column', gap: '8px' }
-            }>
+            <div
+              className={viewMode === 'grid3' ? 'catalogue-grid' : undefined}
+              style={
+                viewMode === 'grid3'
+                  ? { gap: '8px', alignItems: 'start' }
+                  : { display: 'flex', flexDirection: 'column', gap: '8px' }
+              }
+            >
               {results.map((item, i) => (
                 <div key={item.rscId} style={{ animation: `stagger-fade-in 0.25s ease-out ${Math.min(i, 8) * 40}ms both`, minWidth: 0 }}>
                   <CatalogCard
@@ -929,7 +972,7 @@ function CatalogCard({ item, onAddToList, viewMode, isInList, library }: { item:
     return (
       <div
         onClick={() => item.url && window.open(item.url, '_blank', 'noopener,noreferrer')}
-        className={avail === true ? 'badge-dispo-pulse' : undefined}
+        className={['card-tap', avail === true ? 'badge-dispo-pulse' : ''].filter(Boolean).join(' ')}
         style={{ cursor: item.url ? 'pointer' : 'default', minWidth: 0, overflow: 'hidden', borderRadius: 'var(--radius-sm)' }}
       >
         <div style={{ position: 'relative', aspectRatio: '2/3', borderRadius: 'var(--radius-sm)', overflow: 'hidden', background: typeConf?.bg ?? 'var(--tab-inactive-bg)' }}>
@@ -987,6 +1030,7 @@ function CatalogCard({ item, onAddToList, viewMode, isInList, library }: { item:
   return (
     <div
       onClick={() => item.url && window.open(item.url, '_blank', 'noopener,noreferrer')}
+      className="card-tap"
       style={{
         background: 'var(--surface)', borderRadius: 'var(--radius-sm)',
         border: '1px solid var(--border)',
@@ -1008,7 +1052,7 @@ function CatalogCard({ item, onAddToList, viewMode, isInList, library }: { item:
       )}
 
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-heading)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', letterSpacing: '-0.2px' }}>
+        <div style={{ fontSize: '15px', fontWeight: 900, color: 'var(--color-heading)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', letterSpacing: '-0.5px' }}>
           {item.title}
         </div>
         <div style={{ fontSize: '11.5px', color: 'var(--text-2)', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
