@@ -34,6 +34,7 @@ export default function BookingCard({ b }: { b: IguanaBooking }) {
       href={b.TitleLink || '#'}
       target="_blank"
       rel="noopener noreferrer"
+      className="card-tap"
       style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 14px', textDecoration: 'none' }}
     >
       <div style={{ width: '7px', height: '7px', borderRadius: '50%', flexShrink: 0, background: dotColor }} />
@@ -55,7 +56,7 @@ export default function BookingCard({ b }: { b: IguanaBooking }) {
           )}
         </div>
         <div style={{ marginTop: '6px' }}>
-          <StatusBadge variant={variant} label={badgeLabel} />
+          <StatusBadge variant={variant} label={badgeLabel} pulse={variant === 'red'} shimmer={b.IsAvailable && variant === 'green'} />
         </div>
         {showUntil && (
           <div style={{ fontSize: '10px', color: 'var(--badge-green-color)', fontWeight: 500, marginTop: '4px' }}>

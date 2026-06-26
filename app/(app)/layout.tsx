@@ -7,7 +7,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <div className="sidebar-wrapper">
         <NavSidebar />
       </div>
-      <main style={{ flex: 1, paddingBottom: 'var(--nav-h)', minWidth: 0, height: '100%', overflowY: 'auto' }} className="app-main">
+      <main style={{ flex: 1, paddingBottom: 'var(--nav-h)', minWidth: 0, height: '100%', overflowY: 'auto', viewTransitionName: 'page-content' } as React.CSSProperties} className="app-main">
         {children}
       </main>
       <div className="bottom-nav-wrapper">

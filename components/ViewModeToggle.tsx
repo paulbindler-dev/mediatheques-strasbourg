@@ -1,6 +1,6 @@
 'use client'
 
-export type ViewMode = 'dots' | 'list' | 'grid2' | 'grid3'
+export type ViewMode = 'dots' | 'list' | 'grid3'
 
 const SVG_DOTS = (
   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
@@ -19,15 +19,6 @@ const SVG_LIST = (
   </svg>
 )
 
-const SVG_GRID2 = (
-  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
-    <rect x="2" y="2" width="9" height="13" rx="1.5"/>
-    <rect x="13" y="2" width="9" height="13" rx="1.5"/>
-    <rect x="2" y="17" width="9" height="5" rx="1.5"/>
-    <rect x="13" y="17" width="9" height="5" rx="1.5"/>
-  </svg>
-)
-
 const SVG_GRID3 = (
   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
     <rect x="2" y="2" width="6" height="9" rx="1"/>
@@ -42,7 +33,6 @@ const SVG_GRID3 = (
 const MODES: { key: ViewMode; title: string; icon: React.ReactNode }[] = [
   { key: 'dots',  title: 'Points', icon: SVG_DOTS },
   { key: 'list',  title: 'Liste',  icon: SVG_LIST },
-  { key: 'grid2', title: '2×2',    icon: SVG_GRID2 },
   { key: 'grid3', title: '3×3',    icon: SVG_GRID3 },
 ]
 

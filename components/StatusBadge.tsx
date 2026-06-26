@@ -6,8 +6,20 @@ const STYLES: Record<Variant, { bg: string; color: string; dot: string }> = {
   gray:  { bg: 'var(--tab-inactive-bg)', color: 'var(--text-2)',            dot: 'var(--border)' },
 }
 
-export default function StatusBadge({ variant, label }: { variant: Variant; label: string }) {
+export default function StatusBadge({
+  variant, label, pulse, shimmer,
+}: {
+  variant: Variant
+  label: string
+  pulse?: boolean
+  shimmer?: boolean
+}) {
   const s = STYLES[variant]
+  const animStyle: React.CSSProperties = pulse
+    ? { animation: 'ring-pulse 0.9s ease-out 0.65s 3' }
+    : shimmer
+    ? { animation: 'green-shimmer 1s ease-out 1.5s 1' }
+    : {}
   return (
     <span style={{
       display: 'inline-flex',
@@ -20,6 +32,7 @@ export default function StatusBadge({ variant, label }: { variant: Variant; labe
       background: s.bg,
       color: s.color,
       fontFamily: 'DM Sans, sans-serif',
+      ...animStyle,
     }}>
       <span style={{
         width: '5px', height: '5px', borderRadius: '50%',

@@ -166,10 +166,18 @@ export default function CataloguePage() {
   const [newPresetName, setNewPresetName] = useState('')
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
   const [showManagePresets, setShowManagePresets] = useState(false)
+  const [showManageHelp, setShowManageHelp] = useState(false)
   const [showCreatePreset, setShowCreatePreset] = useState(false)
   const [newCustomForm, setNewCustomForm] = useState({ label: '', icon: '⭐', type: '', subject: '', query: '' })
   const [presetsState, setPresetsState] = useState<PresetsState>({ hiddenIds: [], orderedIds: [] })
-  const [viewMode, setViewMode] = useState<ViewMode>('dots')
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    try {
+      const saved = localStorage.getItem('catalogue_view_mode')
+      if (saved === 'grid2' || saved === 'icons' || saved === 'images') return 'dots'
+      if (['dots', 'list', 'grid3'].includes(saved ?? '')) return saved as ViewMode
+    } catch {}
+    return 'dots'
+  })
   const [inListTitles, setInListTitles] = useState<Set<string>>(() => {
     const s = loadStore()
     return new Set(s.items.map(i => i.title.toLowerCase()))
@@ -240,12 +248,9 @@ export default function CataloguePage() {
     }, 200)
   }
 
-  const VIEW_CYCLE: ViewMode[] = ['dots', 'list', 'grid2', 'grid3']
+  const VIEW_CYCLE: ViewMode[] = ['dots', 'list', 'grid3']
 
   useEffect(() => {
-    const saved = localStorage.getItem('catalogue_view_mode')
-    if (saved === 'icons' || saved === 'images') setViewMode('list')
-    else if (['dots', 'list', 'grid2', 'grid3'].includes(saved ?? '')) setViewMode(saved as ViewMode)
     const savedSearch = localStorage.getItem('catalogue_search_state')
     if (savedSearch) {
       try {
@@ -562,19 +567,20 @@ export default function CataloguePage() {
               {total} résultat{total > 1 ? 's' : ''} · {libraryLabel(library)}
             </div>
             <div style={
-              viewMode === 'grid2' || viewMode === 'grid3'
-                ? { display: 'grid', gridTemplateColumns: viewMode === 'grid3' ? '1fr 1fr 1fr' : '1fr 1fr', gap: viewMode === 'grid3' ? '8px' : '10px', alignItems: 'start' }
+              viewMode === 'grid3'
+                ? { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', alignItems: 'start' }
                 : { display: 'flex', flexDirection: 'column', gap: '8px' }
             }>
-              {results.map(item => (
-                <CatalogCard
-                  key={item.rscId}
-                  item={item}
-                  onAddToList={() => setShowAddModal(item)}
-                  viewMode={viewMode}
-                  isInList={inListTitles.has(item.title.toLowerCase())}
-                  library={library}
-                />
+              {results.map((item, i) => (
+                <div key={item.rscId} style={{ animation: `stagger-fade-in 0.25s ease-out ${Math.min(i, 8) * 40}ms both`, minWidth: 0 }}>
+                  <CatalogCard
+                    item={item}
+                    onAddToList={() => setShowAddModal(item)}
+                    viewMode={viewMode}
+                    isInList={inListTitles.has(item.title.toLowerCase())}
+                    library={library}
+                  />
+                </div>
               ))}
             </div>
             {hasMore && (
@@ -627,7 +633,7 @@ export default function CataloguePage() {
               <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-2)' }}>Vue des résultats</span>
               <ViewModeToggle value={viewMode} onChange={setViewMode} />
             </div>
-            <div style={{ overflowY: 'auto', padding: '0 12px 24px' }}>
+            <div style={{ overflowY: 'auto', padding: '0 12px 8px', flex: 1 }}>
               <DndContext
                 sensors={dndSensors}
                 collisionDetection={closestCenter}
@@ -647,19 +653,44 @@ export default function CataloguePage() {
                   ))}
                 </SortableContext>
               </DndContext>
-              <div style={{ borderTop: '1px solid var(--border)', marginTop: '8px', paddingTop: '12px' }}>
+
+              {/* Aide — collapsible */}
+              <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '0.5px solid var(--border)' }}>
                 <button
-                  onClick={() => { setShowManagePresets(false); setShowCreatePreset(true) }}
-                  style={{
-                    width: '100%', padding: '11px', background: 'transparent',
-                    border: '1.5px dashed var(--border)', borderRadius: 'var(--radius-sm)',
-                    fontSize: '13px', fontWeight: 600, color: 'var(--text-2)',
-                    cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
-                  }}
+                  onClick={() => setShowManageHelp(v => !v)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-2)', fontFamily: 'DM Sans, sans-serif' }}
                 >
-                  + Créer un filtre
+                  <span style={{ fontSize: '11px', fontWeight: 600 }}>Aide</span>
+                  <span style={{ fontSize: '10px', transition: 'transform 0.2s', display: 'inline-block', transform: showManageHelp ? 'rotate(90deg)' : 'rotate(0deg)' }}>›</span>
                 </button>
+                {showManageHelp && (
+                  <div style={{ marginTop: '10px' }}>
+                    {[
+                      { title: 'Filtres', body: 'Glisse pour réorganiser. L\'œil masque un filtre sans le supprimer. La corbeille supprime définitivement (filtres personnalisés uniquement).' },
+                      { title: 'Créer un filtre', body: 'Choisis un type de document et/ou un mot-clé. Le filtre apparaît dans la barre de raccourcis.' },
+                      { title: 'Vue', body: 'Le sélecteur de vue change l\'affichage des résultats du Catalogue.' },
+                    ].map(({ title, body }) => (
+                      <div key={title} style={{ marginBottom: '10px' }}>
+                        <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-heading)', marginBottom: '2px' }}>{title}</div>
+                        <div style={{ fontSize: '11px', color: 'var(--text-2)', lineHeight: 1.5 }}>{body}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
+            </div>
+            <div style={{ padding: '12px 20px calc(var(--nav-h) + 12px)', borderTop: '0.5px solid var(--border)' }}>
+              <button
+                onClick={() => { setShowManagePresets(false); setShowCreatePreset(true) }}
+                style={{
+                  width: '100%', padding: '11px', background: 'transparent',
+                  border: '1.5px dashed var(--border)', borderRadius: 'var(--radius-sm)',
+                  fontSize: '13px', fontWeight: 600, color: 'var(--text-2)',
+                  cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
+                }}
+              >
+                + Créer un filtre
+              </button>
             </div>
           </div>
         </div>
@@ -676,7 +707,7 @@ export default function CataloguePage() {
           }} onClick={() => setDeleteConfirmId(null)}>
             <div
               className="sheet-enter"
-              style={{ background: 'var(--surface)', width: '100%', padding: '24px', borderRadius: '16px 16px 0 0' }}
+              style={{ background: 'var(--surface)', width: '100%', padding: '24px 24px calc(24px + var(--nav-h))', borderRadius: '16px 16px 0 0' }}
               onClick={e => e.stopPropagation()}
             >
               <div style={{ fontSize: '20px', marginBottom: '8px', textAlign: 'center' }}>{p.icon}</div>
@@ -720,7 +751,7 @@ export default function CataloguePage() {
         }} onClick={() => setShowSaveModal(false)}>
           <div
             className="sheet-enter"
-            style={{ background: 'var(--surface)', width: '100%', padding: '24px', borderRadius: '16px 16px 0 0' }}
+            style={{ background: 'var(--surface)', width: '100%', padding: '24px 24px calc(24px + var(--nav-h))', borderRadius: '16px 16px 0 0' }}
             onClick={e => e.stopPropagation()}
           >
             <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-heading)', marginBottom: '12px' }}>
@@ -767,7 +798,7 @@ export default function CataloguePage() {
         }} onClick={() => setShowCreatePreset(false)}>
           <div
             className="sheet-enter"
-            style={{ background: 'var(--surface)', width: '100%', padding: '24px', borderRadius: '16px 16px 0 0', maxHeight: '90vh', overflowY: 'auto' }}
+            style={{ background: 'var(--surface)', width: '100%', padding: '24px 24px calc(24px + var(--nav-h))', borderRadius: '16px 16px 0 0', maxHeight: '90vh', overflowY: 'auto' }}
             onClick={e => e.stopPropagation()}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
@@ -894,11 +925,12 @@ function CatalogCard({ item, onAddToList, viewMode, isInList, library }: { item:
   const typeLabel = typeBadge(item.type, item.subject ?? '')
   const subtitle = [typeLabel, item.creator, item.year].filter(Boolean).join(' · ')
 
-  if (viewMode === 'grid2' || viewMode === 'grid3') {
+  if (viewMode === 'grid3') {
     return (
       <div
         onClick={() => item.url && window.open(item.url, '_blank', 'noopener,noreferrer')}
-        style={{ cursor: item.url ? 'pointer' : 'default', minWidth: 0, overflow: 'hidden' }}
+        className={avail === true ? 'badge-dispo-pulse' : undefined}
+        style={{ cursor: item.url ? 'pointer' : 'default', minWidth: 0, overflow: 'hidden', borderRadius: 'var(--radius-sm)' }}
       >
         <div style={{ position: 'relative', aspectRatio: '2/3', borderRadius: 'var(--radius-sm)', overflow: 'hidden', background: typeConf?.bg ?? 'var(--tab-inactive-bg)' }}>
           {item.thumbnail && !imgFailed ? (
@@ -910,10 +942,10 @@ function CatalogCard({ item, onAddToList, viewMode, isInList, library }: { item:
             />
           ) : (
             <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <span style={{ fontSize: viewMode === 'grid3' ? '24px' : '32px' }}>{typeIcon}</span>
+              <span style={{ fontSize: '24px' }}>{typeIcon}</span>
             </div>
           )}
-          <div style={{ position: 'absolute', top: '5px', left: '5px', width: '7px', height: '7px', borderRadius: '50%', background: dotColor }} />
+          <div style={{ position: 'absolute', top: '5px', left: '5px', width: '7px', height: '7px', borderRadius: '50%', background: dotColor, animation: avail === true ? 'dot-blink 1.6s ease-in-out infinite' : undefined }} />
           <button
             onClick={e => { e.stopPropagation(); onAddToList() }}
             style={{
@@ -931,7 +963,7 @@ function CatalogCard({ item, onAddToList, viewMode, isInList, library }: { item:
         </div>
         <div style={{ padding: '5px 2px 0' }}>
           <div style={{
-            fontSize: viewMode === 'grid3' ? '10.5px' : '12px', fontWeight: 600,
+            fontSize: '10.5px', fontWeight: 600,
             color: 'var(--color-heading)', lineHeight: 1.3,
             overflow: 'hidden', display: '-webkit-box',
             WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const,
@@ -940,7 +972,7 @@ function CatalogCard({ item, onAddToList, viewMode, isInList, library }: { item:
           </div>
           {(item.creator || item.year) && (
             <div style={{
-              fontSize: viewMode === 'grid3' ? '9.5px' : '10.5px',
+              fontSize: '9.5px',
               color: 'var(--text-2)', marginTop: '2px',
               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             }}>
@@ -963,11 +995,13 @@ function CatalogCard({ item, onAddToList, viewMode, isInList, library }: { item:
         cursor: item.url ? 'pointer' : 'default',
       }}
     >
-      <div style={{
-        width: '7px', height: '7px', borderRadius: '50%', flexShrink: 0,
-        background: dotColor,
-        animation: avail === 'checking' ? 'pulse 1s infinite' : 'none',
-      }} />
+      <div
+        style={{
+          width: '7px', height: '7px', borderRadius: '50%', flexShrink: 0,
+          background: dotColor,
+          animation: avail === 'checking' ? 'pulse 1s infinite' : undefined,
+        }}
+      />
 
       {viewMode === 'list' && (
         <CoverImg thumbnail={item.thumbnail} width={44} height={63} typeIcon={typeIcon} subject={item.subject} typeBg={typeConf?.bg} />

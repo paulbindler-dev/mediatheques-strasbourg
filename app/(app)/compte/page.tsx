@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { getSupabaseBrowser } from '@/lib/supabase-browser'
 import BookingCard from '@/components/BookingCard'
@@ -7,6 +7,22 @@ import LoanCard from '@/components/LoanCard'
 import { sortBookings, type IguanaBooking, type IguanaLoan } from '@/lib/iguana'
 
 type Tab = 'reservations' | 'prets'
+
+const LOADING_MSGS = ['Connexion à Malraux…', 'Vérification Neudorf…', 'Mise à jour des statuts…']
+
+function SkeletonCard() {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 14px' }}>
+      <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: 'var(--border)', flexShrink: 0 }} />
+      <div style={{ width: '44px', height: '63px', borderRadius: '6px', background: 'var(--border)', flexShrink: 0, animation: 'skeleton-pulse 1.4s ease-in-out infinite' }} />
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <div style={{ height: '13px', borderRadius: '4px', background: 'var(--border)', width: '65%', animation: 'skeleton-pulse 1.4s ease-in-out infinite' }} />
+        <div style={{ height: '11px', borderRadius: '4px', background: 'var(--border)', width: '45%', animation: 'skeleton-pulse 1.4s ease-in-out infinite 0.1s' }} />
+        <div style={{ height: '18px', borderRadius: '6px', background: 'var(--border)', width: '80px', animation: 'skeleton-pulse 1.4s ease-in-out infinite 0.2s' }} />
+      </div>
+    </div>
+  )
+}
 
 export default function ComptePage() {
   const [tab, setTab] = useState<Tab>('reservations')
@@ -17,7 +33,20 @@ export default function ComptePage() {
   const [apiError, setApiError] = useState<string | null>(null)
   const [needsReconnect, setNeedsReconnect] = useState(false)
   const [userName, setUserName] = useState('Paul')
+  const [loadingMsg, setLoadingMsg] = useState(LOADING_MSGS[0])
+  const loadedAtRef = useRef<number>(0)
+  const loadStartRef = useRef<number>(Date.now())
   const router = useRouter()
+
+  useEffect(() => {
+    if (!loading) return
+    let i = 0
+    const t = setInterval(() => {
+      i = (i + 1) % LOADING_MSGS.length
+      setLoadingMsg(LOADING_MSGS[i])
+    }, 2600)
+    return () => clearInterval(t)
+  }, [loading])
 
   useEffect(() => {
     const sb = getSupabaseBrowser()
@@ -32,19 +61,24 @@ export default function ComptePage() {
       fetch('/api/iguana/bookings').then(r => r.json()),
       fetch('/api/iguana/loans').then(r => r.json()),
     ]).then(([b, l]) => {
-      if (b?.error === 'No session') { setNoSession(true); setLoading(false); return }
-      if (b?.error) {
-        setApiError(b.error)
-        if (b?.needsReconnect) setNeedsReconnect(true)
+      const finish = () => {
+        if (b?.error === 'No session') { setNoSession(true); setLoading(false); return }
+        if (b?.error) {
+          setApiError(b.error)
+          if (b?.needsReconnect) setNeedsReconnect(true)
+          setLoading(false)
+          return
+        }
+        setBookings(Array.isArray(b) ? sortBookings(b) : [])
+        setLoans(Array.isArray(l) ? l : [])
+        loadedAtRef.current = Date.now()
         setLoading(false)
-        return
       }
-      setBookings(Array.isArray(b) ? sortBookings(b) : [])
-      setLoans(Array.isArray(l) ? l : [])
-      setLoading(false)
+      const elapsed = Date.now() - loadStartRef.current
+      const delay = Math.max(0, 650 - elapsed)
+      if (delay > 0) { setTimeout(finish, delay) } else { finish() }
     }).catch((e) => { setApiError(String(e)); setLoading(false) })
 
-    // Request push permission once data loads
     if (typeof window !== 'undefined' && 'Notification' in window && 'serviceWorker' in navigator) {
       navigator.serviceWorker.ready.then(async reg => {
         if (Notification.permission !== 'default') return
@@ -89,8 +123,10 @@ export default function ComptePage() {
     <div>
       {/* Header */}
       <div style={{ background: 'var(--surface)', padding: '20px 18px 0', borderBottom: '1px solid var(--border)' }}>
-        <div style={{ fontSize: '26px', fontWeight: 800, color: 'var(--color-heading)', letterSpacing: '-0.5px', fontFamily: 'DM Sans, sans-serif' }}>
-          Bonjour {userName}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ fontSize: '26px', fontWeight: 800, color: 'var(--color-heading)', letterSpacing: '-0.5px', fontFamily: 'DM Sans, sans-serif' }}>
+            Bonjour {userName}
+          </div>
         </div>
         <div style={{ display: 'flex', gap: '6px', marginTop: '14px', paddingBottom: '14px' }}>
           {([
@@ -141,29 +177,53 @@ export default function ComptePage() {
             )}
           </div>
         )}
+
         {loading && (
-          <div style={{ color: 'var(--text-2)', fontSize: '13px', textAlign: 'center', paddingTop: '48px', fontFamily: 'DM Mono, monospace' }}>
-            Chargement…
-          </div>
+          <>
+            <div className="group-items" style={{ background: 'var(--surface)', borderRadius: '12px', overflow: 'hidden' }}>
+              <SkeletonCard />
+              <SkeletonCard />
+              <SkeletonCard />
+            </div>
+            <div style={{ textAlign: 'center', fontSize: '11px', color: 'var(--text-2)', transition: 'opacity 0.3s ease' }}>
+              {loadingMsg}
+            </div>
+          </>
         )}
-        {!loading && tab === 'reservations' && bookings.length === 0 && (
+
+        {!loading && tab === 'reservations' && bookings.length === 0 && !apiError && (
           <div style={{ color: 'var(--text-2)', fontSize: '13px', textAlign: 'center', paddingTop: '48px' }}>
             Aucune réservation en cours
           </div>
         )}
-        {!loading && tab === 'prets' && loans.length === 0 && (
-          <div style={{ color: 'var(--text-2)', fontSize: '13px', textAlign: 'center', paddingTop: '48px' }}>
-            Aucun prêt en cours
+
+        {!loading && tab === 'prets' && loans.length === 0 && !apiError && (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: '48px', gap: '12px' }}>
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--border)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+            </svg>
+            <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--color-heading)' }}>Aucun prêt en cours</div>
+            <div style={{ fontSize: '11px', color: 'var(--text-2)' }}>Vérifié à l&apos;instant</div>
           </div>
         )}
+
         {!loading && tab === 'reservations' && bookings.length > 0 && (
           <div className="group-items" style={{ background: 'var(--surface)', borderRadius: '12px', overflow: 'hidden' }}>
-            {bookings.map(b => <BookingCard key={b.Id} b={b} />)}
+            {bookings.map((b, i) => (
+              <div key={b.Id} style={{ animation: `stagger-fade-in 0.28s ease-out ${i * 55}ms both` }}>
+                <BookingCard b={b} />
+              </div>
+            ))}
           </div>
         )}
         {!loading && tab === 'prets' && loans.length > 0 && (
           <div className="group-items" style={{ background: 'var(--surface)', borderRadius: '12px', overflow: 'hidden' }}>
-            {loans.map((l, i) => <LoanCard key={l.HoldingId || i} l={l} />)}
+            {loans.map((l, i) => (
+              <div key={l.HoldingId || i} style={{ animation: `stagger-fade-in 0.28s ease-out ${i * 55}ms both` }}>
+                <LoanCard l={l} />
+              </div>
+            ))}
           </div>
         )}
       </div>
