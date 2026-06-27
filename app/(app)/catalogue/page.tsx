@@ -678,7 +678,7 @@ export default function CataloguePage() {
       {/* Manage presets modal */}
       {showManagePresets && (
         <div className="overlay-enter" style={{
-          position: 'fixed', inset: 0, background: 'var(--overlay)',
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 'var(--nav-h)', background: 'var(--overlay)',
           display: 'flex', alignItems: 'flex-end', zIndex: 200,
         }} onClick={() => setShowManagePresets(false)}>
           <div
@@ -766,7 +766,7 @@ export default function CataloguePage() {
         if (!p) return null
         return (
           <div className="overlay-enter" style={{
-            position: 'fixed', inset: 0, background: 'var(--overlay)',
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 'var(--nav-h)', background: 'var(--overlay)',
             display: 'flex', alignItems: 'flex-end', zIndex: 200,
           }} onClick={() => setDeleteConfirmId(null)}>
             <div
@@ -810,7 +810,7 @@ export default function CataloguePage() {
       {/* Save preset modal */}
       {showSaveModal && (
         <div className="overlay-enter" style={{
-          position: 'fixed', inset: 0, background: 'var(--overlay)',
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 'var(--nav-h)', background: 'var(--overlay)',
           display: 'flex', alignItems: 'flex-end', zIndex: 200,
         }} onClick={() => setShowSaveModal(false)}>
           <div
@@ -857,7 +857,7 @@ export default function CataloguePage() {
       {/* Create preset modal */}
       {showCreatePreset && (
         <div className="overlay-enter" style={{
-          position: 'fixed', inset: 0, background: 'var(--overlay)',
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 'var(--nav-h)', background: 'var(--overlay)',
           display: 'flex', alignItems: 'flex-end', zIndex: 200,
         }} onClick={() => setShowCreatePreset(false)}>
           <div
@@ -1115,7 +1115,8 @@ function AddToListModal({ item, onAdd, onClose }: {
 
   return (
     <div className="overlay-enter" style={{
-      position: 'fixed', inset: 0, background: 'var(--overlay)',
+      position: 'fixed', top: 0, left: 0, right: 0, bottom: 'var(--nav-h)',
+      background: 'var(--overlay)',
       display: 'flex', alignItems: 'flex-end', zIndex: 200,
     }} onClick={onClose}>
       <div
@@ -1153,7 +1154,7 @@ function AddToListModal({ item, onAdd, onClose }: {
         </div>
 
         {/* Pied fixe — toujours visible */}
-        <div style={{ padding: '12px 20px calc(12px + env(safe-area-inset-bottom, 0px))', borderTop: '0.5px solid var(--border)', flexShrink: 0 }}>
+        <div style={{ padding: '12px 20px 16px', borderTop: '0.5px solid var(--border)', flexShrink: 0 }}>
           {!creating ? (
             <button
               onClick={() => setCreating(true)}

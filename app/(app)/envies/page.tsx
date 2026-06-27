@@ -915,7 +915,7 @@ export default function EnviesPage() {
       {/* Manage lists modal */}
       {showManageModal && (
         <div className="overlay-enter" style={{
-          position: 'fixed', inset: 0, background: 'var(--overlay)',
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 'var(--nav-h)', background: 'var(--overlay)',
           display: 'flex', alignItems: 'flex-end', zIndex: 200,
         }} onClick={() => setShowManageModal(false)}>
           <div
@@ -1005,7 +1005,7 @@ export default function EnviesPage() {
         const itemCount = store.items.filter(i => i.listId === deleteConfirmId).length
         return (
           <div className="overlay-enter" style={{
-            position: 'fixed', inset: 0, background: 'var(--overlay)',
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 'var(--nav-h)', background: 'var(--overlay)',
             display: 'flex', alignItems: 'flex-end', zIndex: 200,
           }} onClick={() => setDeleteConfirmId(null)}>
             <div
@@ -1055,7 +1055,7 @@ export default function EnviesPage() {
       {/* New list modal */}
       {showNewListModal && (
         <div className="overlay-enter" style={{
-          position: 'fixed', inset: 0, background: 'var(--overlay)',
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 'var(--nav-h)', background: 'var(--overlay)',
           display: 'flex', alignItems: 'flex-end', zIndex: 200,
         }} onClick={() => setShowNewListModal(false)}>
           <div
