@@ -1363,6 +1363,7 @@ function ItemCard({
         onTouchEnd={handleTouchEnd}
         style={{
           padding: '9px 14px',
+          minHeight: '54px',
           display: 'flex', alignItems: 'center', gap: '10px',
           cursor: url ? 'pointer' : 'default',
           background: 'var(--surface)',
