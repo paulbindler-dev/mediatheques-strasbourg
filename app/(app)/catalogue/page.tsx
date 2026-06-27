@@ -1101,13 +1101,6 @@ function AddToListModal({ item, onAdd, onClose }: {
   const [newName, setNewName] = useState('')
   const [newIcon, setNewIcon] = useState('⭐')
 
-  useEffect(() => {
-    const main = document.querySelector('.app-main') as HTMLElement | null
-    if (!main) return
-    const prev = main.style.overflowY
-    main.style.overflowY = 'hidden'
-    return () => { main.style.overflowY = prev }
-  }, [])
 
   function handleCreate() {
     const name = newName.trim()
@@ -1124,10 +1117,11 @@ function AddToListModal({ item, onAdd, onClose }: {
     <div className="overlay-enter" style={{
       position: 'fixed', inset: 0, background: 'var(--overlay)',
       display: 'flex', alignItems: 'flex-end', zIndex: 200,
+      overflow: 'hidden',
     }} onClick={onClose}>
       <div
         className="sheet-enter"
-        style={{ background: 'var(--surface)', width: '100%', padding: '20px', borderRadius: '16px 16px 0 0', maxHeight: '80vh', overflowY: 'auto' }}
+        style={{ background: 'var(--surface)', width: '100%', padding: '20px', borderRadius: '16px 16px 0 0', maxHeight: '80vh', overflowY: 'auto', overscrollBehavior: 'contain' } as React.CSSProperties}
         onClick={e => e.stopPropagation()}
       >
         <div style={{ fontSize: '12px', color: 'var(--text-2)', marginBottom: '4px' }}>Ajouter à une liste</div>
