@@ -1117,18 +1117,22 @@ function AddToListModal({ item, onAdd, onClose }: {
     <div className="overlay-enter" style={{
       position: 'fixed', inset: 0, background: 'var(--overlay)',
       display: 'flex', alignItems: 'flex-end', zIndex: 200,
-      overflow: 'hidden',
     }} onClick={onClose}>
       <div
         className="sheet-enter"
-        style={{ background: 'var(--surface)', width: '100%', padding: '20px', borderRadius: '16px 16px 0 0', maxHeight: '80vh', overflowY: 'auto', overscrollBehavior: 'contain' } as React.CSSProperties}
+        style={{ background: 'var(--surface)', width: '100%', borderRadius: '16px 16px 0 0', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}
         onClick={e => e.stopPropagation()}
       >
-        <div style={{ fontSize: '12px', color: 'var(--text-2)', marginBottom: '4px' }}>Ajouter à une liste</div>
-        <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-heading)', marginBottom: '16px', lineHeight: 1.3 }}>
-          {item.title}
+        {/* Header fixe */}
+        <div style={{ padding: '20px 20px 12px', flexShrink: 0 }}>
+          <div style={{ fontSize: '12px', color: 'var(--text-2)', marginBottom: '4px' }}>Ajouter à une liste</div>
+          <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-heading)', lineHeight: 1.3 }}>
+            {item.title}
+          </div>
         </div>
 
+        {/* Contenu scrollable */}
+        <div style={{ overflowY: 'auto', flex: 1, padding: '0 20px 20px' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
           {store.lists.map(list => (
             <button
@@ -1223,6 +1227,7 @@ function AddToListModal({ item, onAdd, onClose }: {
             </div>
           </div>
         )}
+        </div>{/* fin scrollable */}
       </div>
     </div>
   )
