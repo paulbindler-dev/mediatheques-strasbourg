@@ -1131,103 +1131,103 @@ function AddToListModal({ item, onAdd, onClose }: {
           </div>
         </div>
 
-        {/* Contenu scrollable */}
-        <div style={{ overflowY: 'auto', flex: 1, padding: '0 20px 20px' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
-          {store.lists.map(list => (
-            <button
-              key={list.id}
-              onClick={() => onAdd(item, list.id)}
-              style={{
-                padding: '12px 14px', background: 'var(--bg)',
-                border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)',
-                textAlign: 'left', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
-                display: 'flex', alignItems: 'center', gap: '10px',
-              }}
-            >
-              <span style={{ fontSize: '20px' }}>{list.icon}</span>
-              <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-heading)' }}>{list.name}</span>
-            </button>
-          ))}
+        {/* Contenu scrollable — listes uniquement */}
+        <div style={{ overflowY: 'auto', flex: 1, padding: '0 20px 8px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {store.lists.map(list => (
+              <button
+                key={list.id}
+                onClick={() => onAdd(item, list.id)}
+                style={{
+                  padding: '12px 14px', background: 'var(--bg)',
+                  border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)',
+                  textAlign: 'left', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
+                  display: 'flex', alignItems: 'center', gap: '10px',
+                }}
+              >
+                <span style={{ fontSize: '20px' }}>{list.icon}</span>
+                <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-heading)' }}>{list.name}</span>
+              </button>
+            ))}
+          </div>
         </div>
 
-        {!creating ? (
-          <button
-            onClick={() => setCreating(true)}
-            style={{
-              width: '100%', padding: '11px', background: 'transparent',
-              border: '1.5px dashed var(--border)', borderRadius: 'var(--radius-sm)',
-              fontSize: '13px', fontWeight: 600, color: 'var(--text-2)',
-              cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
-            }}
-          >
-            + Nouvelle liste
-          </button>
-        ) : (
-          <div style={{ borderTop: '1px solid var(--border)', paddingTop: '14px', marginTop: '4px' }}>
-            <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-heading)', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-              Nouvelle liste
-            </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>
-              {LIST_ICONS.map(ic => (
+        {/* Pied fixe — toujours visible */}
+        <div style={{ padding: '12px 20px calc(12px + env(safe-area-inset-bottom, 0px))', borderTop: '0.5px solid var(--border)', flexShrink: 0 }}>
+          {!creating ? (
+            <button
+              onClick={() => setCreating(true)}
+              style={{
+                width: '100%', padding: '11px', background: 'transparent',
+                border: '1.5px dashed var(--border)', borderRadius: 'var(--radius-sm)',
+                fontSize: '13px', fontWeight: 600, color: 'var(--text-2)',
+                cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
+              }}
+            >
+              + Nouvelle liste
+            </button>
+          ) : (
+            <div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>
+                {LIST_ICONS.map(ic => (
+                  <button
+                    key={ic}
+                    onClick={() => setNewIcon(ic)}
+                    style={{
+                      width: '36px', height: '36px', borderRadius: '8px', fontSize: '18px',
+                      border: newIcon === ic ? '2px solid var(--navy)' : '1.5px solid var(--border)',
+                      background: newIcon === ic ? 'var(--tab-inactive-bg)' : 'transparent',
+                      cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}
+                  >
+                    {ic}
+                  </button>
+                ))}
+              </div>
+              <input
+                type="text"
+                value={newName}
+                onChange={e => setNewName(e.target.value)}
+                placeholder="Nom de la liste…"
+                autoFocus
+                onKeyDown={e => e.key === 'Enter' && handleCreate()}
+                style={{
+                  width: '100%', padding: '10px 14px', marginBottom: '10px',
+                  borderRadius: 'var(--radius-sm)', border: '1.5px solid var(--border)',
+                  fontSize: '14px', background: 'var(--bg)', color: 'var(--text)',
+                  fontFamily: 'DM Sans, sans-serif', outline: 'none',
+                }}
+              />
+              <div style={{ display: 'flex', gap: '8px' }}>
                 <button
-                  key={ic}
-                  onClick={() => setNewIcon(ic)}
+                  onClick={() => { setCreating(false); setNewName('') }}
                   style={{
-                    width: '36px', height: '36px', borderRadius: '8px', fontSize: '18px',
-                    border: newIcon === ic ? '2px solid var(--navy)' : '1.5px solid var(--border)',
-                    background: newIcon === ic ? 'var(--tab-inactive-bg)' : 'transparent',
-                    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    flex: 1, padding: '11px', background: 'var(--bg)',
+                    border: '1.5px solid var(--border)', borderRadius: 'var(--radius-sm)',
+                    fontSize: '13px', fontWeight: 600, color: 'var(--text-2)',
+                    cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
                   }}
                 >
-                  {ic}
+                  Annuler
                 </button>
-              ))}
+                <button
+                  onClick={handleCreate}
+                  disabled={!newName.trim()}
+                  style={{
+                    flex: 2, padding: '11px', background: 'var(--navy)', color: 'white',
+                    border: 'none', borderRadius: 'var(--radius-sm)',
+                    fontSize: '13px', fontWeight: 700,
+                    cursor: !newName.trim() ? 'not-allowed' : 'pointer',
+                    opacity: !newName.trim() ? 0.45 : 1,
+                    fontFamily: 'DM Sans, sans-serif',
+                  }}
+                >
+                  Créer et ajouter
+                </button>
+              </div>
             </div>
-            <input
-              type="text"
-              value={newName}
-              onChange={e => setNewName(e.target.value)}
-              placeholder="Nom de la liste…"
-              autoFocus
-              onKeyDown={e => e.key === 'Enter' && handleCreate()}
-              style={{
-                width: '100%', padding: '10px 14px', marginBottom: '10px',
-                borderRadius: 'var(--radius-sm)', border: '1.5px solid var(--border)',
-                fontSize: '14px', background: 'var(--bg)', color: 'var(--text)',
-                fontFamily: 'DM Sans, sans-serif', outline: 'none',
-              }}
-            />
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <button
-                onClick={() => { setCreating(false); setNewName('') }}
-                style={{
-                  flex: 1, padding: '11px', background: 'var(--bg)',
-                  border: '1.5px solid var(--border)', borderRadius: 'var(--radius-sm)',
-                  fontSize: '13px', fontWeight: 600, color: 'var(--text-2)',
-                  cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
-                }}
-              >
-                Annuler
-              </button>
-              <button
-                onClick={handleCreate}
-                disabled={!newName.trim()}
-                style={{
-                  flex: 2, padding: '11px', background: 'var(--navy)', color: 'white',
-                  border: 'none', borderRadius: 'var(--radius-sm)',
-                  fontSize: '13px', fontWeight: 700,
-                  cursor: !newName.trim() ? 'not-allowed' : 'pointer',
-                  opacity: !newName.trim() ? 0.45 : 1,
-                  fontFamily: 'DM Sans, sans-serif',
-                }}
-              >
-                Créer et ajouter
-              </button>
-            </div>
-          </div>
-        )}
-        </div>{/* fin scrollable */}
+          )}
+        </div>
       </div>
     </div>
   )
