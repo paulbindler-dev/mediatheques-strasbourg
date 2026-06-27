@@ -743,7 +743,7 @@ export default function CataloguePage() {
                 )}
               </div>
             </div>
-            <div style={{ padding: '12px 20px calc(var(--nav-h) + 12px)', borderTop: '0.5px solid var(--border)' }}>
+            <div style={{ padding: '12px 20px 16px', borderTop: '0.5px solid var(--border)' }}>
               <button
                 onClick={() => { setShowManagePresets(false); setShowCreatePreset(true) }}
                 style={{
@@ -771,7 +771,7 @@ export default function CataloguePage() {
           }} onClick={() => setDeleteConfirmId(null)}>
             <div
               className="sheet-enter"
-              style={{ background: 'var(--surface)', width: '100%', padding: '24px 24px calc(24px + var(--nav-h))', borderRadius: '16px 16px 0 0' }}
+              style={{ background: 'var(--surface)', width: '100%', padding: '24px', borderRadius: '16px 16px 0 0' }}
               onClick={e => e.stopPropagation()}
             >
               <div style={{ fontSize: '20px', marginBottom: '8px', textAlign: 'center' }}>{p.icon}</div>
@@ -815,7 +815,7 @@ export default function CataloguePage() {
         }} onClick={() => setShowSaveModal(false)}>
           <div
             className="sheet-enter"
-            style={{ background: 'var(--surface)', width: '100%', padding: '24px 24px calc(24px + var(--nav-h))', borderRadius: '16px 16px 0 0' }}
+            style={{ background: 'var(--surface)', width: '100%', padding: '24px', borderRadius: '16px 16px 0 0' }}
             onClick={e => e.stopPropagation()}
           >
             <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-heading)', marginBottom: '12px' }}>
@@ -862,7 +862,7 @@ export default function CataloguePage() {
         }} onClick={() => setShowCreatePreset(false)}>
           <div
             className="sheet-enter"
-            style={{ background: 'var(--surface)', width: '100%', padding: '24px 24px calc(24px + var(--nav-h))', borderRadius: '16px 16px 0 0', maxHeight: '90vh', overflowY: 'auto' }}
+            style={{ background: 'var(--surface)', width: '100%', padding: '24px', borderRadius: '16px 16px 0 0', maxHeight: '90vh', overflowY: 'auto' }}
             onClick={e => e.stopPropagation()}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>

@@ -981,7 +981,7 @@ export default function EnviesPage() {
                 )}
               </div>
             </div>
-            <div style={{ padding: '12px 20px calc(var(--nav-h) + 12px)', borderTop: '0.5px solid var(--border)' }}>
+            <div style={{ padding: '12px 20px 16px', borderTop: '0.5px solid var(--border)' }}>
               <button
                 onClick={() => { setShowManageModal(false); setShowNewListModal(true) }}
                 style={{
@@ -1010,7 +1010,7 @@ export default function EnviesPage() {
           }} onClick={() => setDeleteConfirmId(null)}>
             <div
               className="sheet-enter"
-              style={{ background: 'var(--surface)', width: '100%', padding: '24px 24px calc(24px + var(--nav-h))', borderRadius: '16px 16px 0 0' }}
+              style={{ background: 'var(--surface)', width: '100%', padding: '24px', borderRadius: '16px 16px 0 0' }}
               onClick={e => e.stopPropagation()}
             >
               <div style={{ fontSize: '20px', marginBottom: '8px', textAlign: 'center' }}>{list.icon}</div>
@@ -1060,7 +1060,7 @@ export default function EnviesPage() {
         }} onClick={() => setShowNewListModal(false)}>
           <div
             className="sheet-enter"
-            style={{ background: 'var(--surface)', width: '100%', padding: '24px 24px calc(24px + var(--nav-h))', borderRadius: '16px 16px 0 0' }}
+            style={{ background: 'var(--surface)', width: '100%', padding: '24px', borderRadius: '16px 16px 0 0' }}
             onClick={e => e.stopPropagation()}
           >
             <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-heading)', marginBottom: '16px' }}>
