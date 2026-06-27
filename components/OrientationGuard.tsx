@@ -34,7 +34,7 @@ export default function OrientationGuard() {
           Tourne ton téléphone
         </div>
         <div style={{ fontSize: '13px', color: 'var(--text-2)', fontFamily: 'DM Sans, sans-serif' }}>
-          L'app est optimisée en portrait
+          L&apos;app est optimisée en portrait
         </div>
       </div>
     </div>
