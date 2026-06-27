@@ -206,6 +206,11 @@ textarea:focus {
   animation-name: vt-fade-slide-in-reverse;
 }
 
+/* Nav bar stays fixed above page-content during view transitions */
+::view-transition-image-pair(nav-bar) {
+  animation: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   ::view-transition-old(page-content),
   ::view-transition-new(page-content) { animation: none; }

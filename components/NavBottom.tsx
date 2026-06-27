@@ -100,7 +100,8 @@ export default function NavBottom() {
       borderTop: '0.5px solid var(--border)',
       paddingBottom: 'env(safe-area-inset-bottom, 0px)',
       zIndex: 100,
-    }}>
+      viewTransitionName: 'nav-bar',
+    } as React.CSSProperties}>
       {/* Swipe position dots */}
       <div style={{ display: 'flex', justifyContent: 'center', gap: '5px', paddingTop: '6px' }}>
         {TABS.map((_, i) => (
