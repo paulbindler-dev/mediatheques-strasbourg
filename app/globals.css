@@ -206,6 +206,21 @@ textarea:focus {
   animation-name: vt-fade-slide-in-reverse;
 }
 
+/* Portrait lock — rotate html to counter device landscape rotation */
+html.landscape-lock {
+  transform: rotate(var(--landscape-rot, -90deg));
+  transform-origin: center center;
+  width: 100vh;
+  height: 100vw;
+  position: fixed;
+  top: calc(50vh - 50vw);
+  left: calc(50vw - 50vh);
+  overflow: hidden;
+}
+html.landscape-lock .app-layout {
+  height: 100%;
+}
+
 /* Nav bar stays fixed above page-content during view transitions */
 ::view-transition-image-pair(nav-bar) {
   animation: none;
