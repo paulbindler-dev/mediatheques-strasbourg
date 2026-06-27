@@ -169,9 +169,6 @@ export default function NavBottom() {
           )
         })}
       </div>
-
-      {/* iOS safe area */}
-      <div style={{ height: 'env(safe-area-inset-bottom, 0px)' }} />
     </nav>
   )
 }
