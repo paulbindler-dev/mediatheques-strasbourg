@@ -1,9 +1,11 @@
 import NavBottom from '@/components/NavBottom'
 import NavSidebar from '@/components/NavSidebar'
+import OrientationGuard from '@/components/OrientationGuard'
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div style={{ display: 'flex', height: '100dvh', paddingTop: 'env(safe-area-inset-top, 0px)' }}>
+      <OrientationGuard />
       <div className="sidebar-wrapper">
         <NavSidebar />
       </div>
