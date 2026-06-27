@@ -13,7 +13,7 @@ import { CSS } from '@dnd-kit/utilities'
 import type { CatalogueItem } from '@/app/api/catalogue/search/route'
 import CoverImg from '@/components/CoverImg'
 import { ViewModeToggle, type ViewMode, TYPE_CONFIG, typeBadge } from '@/components/ViewModeToggle'
-import { loadStore, saveStore, addItem, addCustomList, libraryLabel, type LibraryKey } from '@/lib/wishlists'
+import { loadStore, saveStore, addItem, removeItem, addCustomList, libraryLabel, type LibraryKey } from '@/lib/wishlists'
 
 const LIST_ICONS = ['🎮', '🕹️', '🎬', '🎥', '📚', '📖', '🎵', '🎭', '⭐', '❤️', '🔖', '🎯']
 
@@ -160,7 +160,8 @@ export default function CataloguePage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [page, setPage] = useState(0)
-  const [addToast, setAddToast] = useState<string | null>(null)
+  const [undoAdd, setUndoAdd] = useState<{ itemId: string; itemTitle: string; listName: string } | null>(null)
+  const undoAddTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [showAddModal, setShowAddModal] = useState<CatalogueItem | null>(null)
   const [showSaveModal, setShowSaveModal] = useState(false)
   const [newPresetName, setNewPresetName] = useState('')
@@ -351,13 +352,33 @@ export default function CataloguePage() {
 
   const handleAddToList = useCallback((item: CatalogueItem, listId: string) => {
     const store = loadStore()
+    const listName = store.lists.find(l => l.id === listId)?.name ?? 'liste'
     const updated = addItem(store, listId, item.title)
     saveStore(updated)
+    const newItem = updated.items.find(i => i.listId === listId && i.title.toLowerCase() === item.title.toLowerCase())
     setInListTitles(prev => { const next = new Set(prev); next.add(item.title.toLowerCase()); return next })
-    setAddToast(`"${item.title}" ajouté`)
-    setTimeout(() => setAddToast(null), 2500)
+    if (newItem) {
+      setUndoAdd({ itemId: newItem.id, itemTitle: item.title, listName })
+      if (undoAddTimerRef.current) clearTimeout(undoAddTimerRef.current)
+      undoAddTimerRef.current = setTimeout(() => setUndoAdd(null), 3500)
+    }
     setShowAddModal(null)
   }, [])
+
+  function handleUndoAdd() {
+    if (!undoAdd) return
+    if (undoAddTimerRef.current) clearTimeout(undoAddTimerRef.current)
+    const store = loadStore()
+    const updated = removeItem(store, undoAdd.itemId)
+    saveStore(updated)
+    setInListTitles(prev => {
+      const next = new Set(prev)
+      const stillExists = updated.items.some(i => i.title.toLowerCase() === undoAdd.itemTitle.toLowerCase())
+      if (!stillExists) next.delete(undoAdd.itemTitle.toLowerCase())
+      return next
+    })
+    setUndoAdd(null)
+  }
 
   function createCustomPreset() {
     const name = newCustomForm.label.trim()
@@ -909,18 +930,11 @@ export default function CataloguePage() {
         </div>
       )}
 
-      {/* Toast */}
-      {addToast && (
-        <div style={{
-          position: 'fixed', bottom: 'calc(var(--nav-h) + 12px)', left: '50%',
-          transform: 'translateX(-50%)',
-          background: 'var(--navy)', color: 'white',
-          padding: '8px 18px', borderRadius: '20px',
-          fontSize: '12px', fontWeight: 600,
-          fontFamily: 'DM Sans, sans-serif',
-          zIndex: 300, whiteSpace: 'nowrap',
-        }}>
-          ✓ {addToast}
+      {/* Undo add */}
+      {undoAdd && (
+        <div style={{ position: 'fixed', bottom: 'calc(var(--nav-h) + 12px)', left: '16px', right: '16px', background: 'var(--navy)', color: 'white', borderRadius: '12px', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 300, boxShadow: '0 4px 20px rgba(0,0,0,0.25)', animation: 'fade-in 0.18s ease-out' }}>
+          <span style={{ fontSize: '13px', fontWeight: 600 }}>Ajouté dans « {undoAdd.listName} »</span>
+          <button onClick={handleUndoAdd} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', color: 'white', borderRadius: '8px', padding: '5px 12px', fontSize: '12px', fontWeight: 700, cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>Annuler</button>
         </div>
       )}
     </div>
@@ -1088,9 +1102,11 @@ function AddToListModal({ item, onAdd, onClose }: {
   const [newIcon, setNewIcon] = useState('⭐')
 
   useEffect(() => {
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => { document.body.style.overflow = prev }
+    const main = document.querySelector('.app-main') as HTMLElement | null
+    if (!main) return
+    const prev = main.style.overflowY
+    main.style.overflowY = 'hidden'
+    return () => { main.style.overflowY = prev }
   }, [])
 
   function handleCreate() {
