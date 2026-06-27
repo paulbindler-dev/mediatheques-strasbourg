@@ -570,14 +570,16 @@ export default function EnviesPage() {
             onClick={() => setShowManageModal(true)}
             style={{
               fontSize: '10.5px', fontWeight: 600, flexShrink: 0,
-              padding: '5px 10px', borderRadius: '20px',
+              padding: '5px 12px', borderRadius: '20px',
               border: '1.5px solid var(--border)',
               background: 'transparent', color: 'var(--text-2)',
               cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
+              display: 'flex', alignItems: 'center', gap: '4px',
             }}
-            title="Gérer les listes"
+            aria-label="Gérer les listes"
           >
             <SlidersHorizontal size={13} strokeWidth={2} />
+            Gérer
           </button>
           {store.lists.filter(l => !l.hidden).map(list => (
             <button
