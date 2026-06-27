@@ -98,6 +98,7 @@ export default function NavBottom() {
       backdropFilter: 'blur(20px)',
       WebkitBackdropFilter: 'blur(20px)',
       borderTop: '0.5px solid var(--border)',
+      paddingBottom: 'env(safe-area-inset-bottom, 0px)',
       zIndex: 100,
     }}>
       {/* Swipe position dots */}

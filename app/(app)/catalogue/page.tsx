@@ -994,9 +994,9 @@ function CatalogCard({ item, onAddToList, viewMode, isInList, library }: { item:
             style={{
               position: 'absolute', bottom: '6px', right: '6px',
               width: '28px', height: '28px', borderRadius: '50%',
-              background: isInList ? 'var(--green-subtle)' : 'rgba(255,255,255,0.92)',
+              background: isInList ? 'var(--green)' : 'rgba(255,255,255,0.92)',
               border: 'none', cursor: 'pointer',
-              color: isInList ? 'var(--green)' : 'var(--navy)',
+              color: isInList ? 'white' : 'var(--navy)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}
           >{isInList
@@ -1064,9 +1064,9 @@ function CatalogCard({ item, onAddToList, viewMode, isInList, library }: { item:
         onClick={e => { e.stopPropagation(); onAddToList() }}
         style={{
           width: '28px', height: '28px', borderRadius: '50%', flexShrink: 0,
-          background: isInList ? 'var(--green-subtle)' : 'var(--tab-inactive-bg)',
+          background: isInList ? 'var(--green)' : 'var(--tab-inactive-bg)',
           border: 'none', cursor: 'pointer',
-          color: isInList ? 'var(--green)' : 'var(--navy)',
+          color: isInList ? 'white' : 'var(--navy)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}
       >{isInList
@@ -1086,6 +1086,12 @@ function AddToListModal({ item, onAdd, onClose }: {
   const [creating, setCreating] = useState(false)
   const [newName, setNewName] = useState('')
   const [newIcon, setNewIcon] = useState('⭐')
+
+  useEffect(() => {
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = prev }
+  }, [])
 
   function handleCreate() {
     const name = newName.trim()
