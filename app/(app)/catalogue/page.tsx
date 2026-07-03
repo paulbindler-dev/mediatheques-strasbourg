@@ -986,7 +986,7 @@ function CatalogCard({ item, onAddToList, viewMode, isInList, library }: { item:
     return (
       <div
         onClick={() => item.url && window.open(item.url, '_blank', 'noopener,noreferrer')}
-        className={['card-tap', avail === true ? 'badge-dispo-pulse' : ''].filter(Boolean).join(' ')}
+        className="card-tap"
         style={{ cursor: item.url ? 'pointer' : 'default', minWidth: 0, overflow: 'hidden', borderRadius: 'var(--radius-sm)' }}
       >
         <div style={{ position: 'relative', aspectRatio: '2/3', borderRadius: 'var(--radius-sm)', overflow: 'hidden', background: typeConf?.bg ?? 'var(--tab-inactive-bg)' }}>
@@ -1002,7 +1002,7 @@ function CatalogCard({ item, onAddToList, viewMode, isInList, library }: { item:
               <span style={{ fontSize: '24px' }}>{typeIcon}</span>
             </div>
           )}
-          <div style={{ position: 'absolute', top: '5px', left: '5px', width: '7px', height: '7px', borderRadius: '50%', background: dotColor, animation: avail === true ? 'dot-blink 1.6s ease-in-out infinite' : undefined }} />
+          <div style={{ position: 'absolute', top: '5px', left: '5px', width: '7px', height: '7px', borderRadius: '50%', background: dotColor }} />
           <button
             onClick={e => { e.stopPropagation(); onAddToList() }}
             style={{

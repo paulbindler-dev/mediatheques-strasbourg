@@ -45,17 +45,21 @@ export async function GET(req: NextRequest) {
 
       // ── Bookings ──────────────────────────────────────────────────────────
       for (const b of bookings) {
+        const availDate = parseIguanaDate(b.AvailabilityDate)
+        const readyDate = availDate ? new Date(availDate.getTime() + 2 * 86_400_000) : null
+        const isTrulyAvailable = b.IsAvailable && (!readyDate || getDaysUntil(readyDate) <= 0)
+
         const wasAvailable = prevMap.get(b.Id) ?? false
-        const justBecameAvailable = !isFirstRun && !wasAvailable && b.IsAvailable
+        const justBecameAvailable = !isFirstRun && !wasAvailable && isTrulyAvailable
 
         if (justBecameAvailable) {
-          // Priority notification: fires exactly once when reservation becomes available
+          // Fires exactly once when reservation is truly ready to pick up (2 days after IsAvailable)
           messages.push({
             title: '📗 Réservation disponible !',
             body: `${b.Title} est prêt à récupérer — ${b.LocationLabel}`,
             url: '/compte',
           })
-        } else if (b.IsAvailable) {
+        } else if (isTrulyAvailable) {
           // Expiry reminders — only if we didn't just fire the "disponible" alert
           const until = parseIguanaDate(b.AvailableUntilDate)
           if (until) {
@@ -84,12 +88,17 @@ export async function GET(req: NextRequest) {
       // ── Persist new states ────────────────────────────────────────────────
       if (bookings.length > 0) {
         await sb.from('booking_states').upsert(
-          bookings.map(b => ({
-            user_id: session.user_id,
-            booking_id: b.Id,
-            is_available: b.IsAvailable,
-            updated_at: new Date().toISOString(),
-          })),
+          bookings.map(b => {
+            const availDate = parseIguanaDate(b.AvailabilityDate)
+            const readyDate = availDate ? new Date(availDate.getTime() + 2 * 86_400_000) : null
+            const isTrulyAvailable = b.IsAvailable && (!readyDate || getDaysUntil(readyDate) <= 0)
+            return {
+              user_id: session.user_id,
+              booking_id: b.Id,
+              is_available: isTrulyAvailable,
+              updated_at: new Date().toISOString(),
+            }
+          }),
           { onConflict: 'user_id,booking_id' }
         )
 

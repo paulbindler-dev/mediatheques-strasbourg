@@ -13,16 +13,28 @@ export default function BookingCard({ b }: { b: IguanaBooking }) {
   const until = parseIguanaDate(b.AvailableUntilDate)
   const daysLeft = until ? getDaysUntil(until) : null
 
+  const availDate = parseIguanaDate(b.AvailabilityDate)
+  const readyDate = availDate ? new Date(availDate.getTime() + 2 * 86_400_000) : null
+  const daysUntilReady = readyDate ? getDaysUntil(readyDate) : 0
+
   let variant: 'red' | 'green' | 'gray' = 'gray'
   let badgeLabel = b.Rank ? `Rang ${b.Rank}` : 'En attente'
 
   if (b.IsAvailable) {
-    const urgent = daysLeft !== null && daysLeft <= 0
-    variant = urgent ? 'red' : 'green'
-    badgeLabel = urgent ? 'Expire aujourd\'hui' : 'À récupérer'
+    if (daysUntilReady >= 2) {
+      variant = 'gray'
+      badgeLabel = 'Dispo dans 2 jours'
+    } else if (daysUntilReady === 1) {
+      variant = 'gray'
+      badgeLabel = 'Dispo dans 1 jour'
+    } else {
+      const urgent = daysLeft !== null && daysLeft <= 0
+      variant = urgent ? 'red' : 'green'
+      badgeLabel = urgent ? 'Expire aujourd\'hui' : 'Disponible'
+    }
   }
 
-  const showUntil = b.IsAvailable && until && daysLeft !== null && daysLeft > 0
+  const showUntil = b.IsAvailable && daysUntilReady <= 0 && until && daysLeft !== null && daysLeft > 0
   const thumb = b.ThumbnailUrl || b.DefaultThumbnailUrl
   const locLabel = shortLoc(b.LocationLabel)
   const isNeudorf = locLabel === 'Neudorf'
